@@ -414,23 +414,7 @@ function AdminModal({
 
               <div>
                 <label className="block font-bold text-stone-700 mb-1">
-                  رقم الواتساب لاستقبال الطلبات *
-                </label>
-                <input
-                  type="text"
-                  value={tempSettings.whatsappNumber}
-                  onChange={(e) => setTempSettings({ ...tempSettings, whatsappNumber: e.target.value })}
-                  placeholder="مثال: 201012345678"
-                  className="w-full px-3 py-2 rounded-lg border border-stone-300 font-mono focus:outline-none focus:border-stone-800"
-                />
-                <span className="text-[10px] text-stone-400 block mt-0.5">
-                  هذا الرقم هو الذي يتم تحويل رسائل وفواتير الطلبات إليه مباشرة
-                </span>
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">
-                  رابط حساب تيك توك للتواصل (TikTok URL)
+                  رابط حساب تيك توك للتواصل (TikTok URL) *
                 </label>
                 <input
                   type="url"
@@ -440,7 +424,7 @@ function AdminModal({
                   className="w-full px-3 py-2 rounded-lg border border-stone-300 font-mono text-xs focus:outline-none focus:border-stone-800"
                 />
                 <span className="text-[10px] text-stone-400 block mt-0.5">
-                  الصقي رابط حساب تيك توك ليظهر زر التواصل المباشر عبر تيك توك لجميع الزبائن فوراً
+                  رابط حساب تيك توك الرسمي لمتجر Chic Shop Galena's
                 </span>
               </div>
 

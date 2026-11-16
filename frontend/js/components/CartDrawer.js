@@ -122,10 +122,10 @@ function CartDrawer({
 
               <button
                 onClick={onProceedCheckout}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs shadow flex items-center justify-center gap-2 transition"
+                className="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold py-2.5 rounded-lg text-xs shadow flex items-center justify-center gap-2 transition"
               >
-                <i className="fa-brands fa-whatsapp text-sm"></i>
                 <span>متابعة إتمام الطلب</span>
+                <i className="fa-solid fa-arrow-left text-xs"></i>
               </button>
             </div>
           )}

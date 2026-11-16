@@ -17,22 +17,41 @@ function OrderSuccessModal({ checkoutSuccess, setCheckoutSuccess }) {
         </div>
 
         <h3 className="text-base font-bold text-stone-900 mb-1">تم تسجيل طلبكِ بنجاح</h3>
-        <p className="text-stone-500 mb-4">
-          رقم الطلب: <strong className="text-stone-900 font-mono">{checkoutSuccess.orderNumber}</strong>
+        <p className="text-stone-500 mb-3">
+          رقم الطلب: <strong className="text-stone-900 font-mono">#{checkoutSuccess.orderNumber}</strong>
         </p>
 
-        <div className="bg-stone-50 p-3 rounded-lg border border-stone-200 text-right space-y-1 mb-4">
-          <p>الاسم: {checkoutSuccess.name}</p>
-          <p>الهاتف: {checkoutSuccess.phone}</p>
-          <p className="font-bold text-stone-900">الإجمالي عند الاستلام: {checkoutSuccess.total} ج.م</p>
+        <div className="bg-stone-50 p-3 rounded-lg border border-stone-200 text-right space-y-1 mb-3">
+          <p>الاسم: <strong className="text-stone-800">{checkoutSuccess.name}</strong></p>
+          <p>الهاتف: <strong className="text-stone-800">{checkoutSuccess.phone}</strong></p>
+          <p className="font-bold text-stone-900 pt-1 border-t border-stone-200">
+            الإجمالي عند الاستلام: <span className="text-emerald-700">{checkoutSuccess.total} ج.م</span>
+          </p>
         </div>
 
-        <button
-          onClick={() => setCheckoutSuccess(null)}
-          className="w-full bg-stone-900 text-white font-medium py-2 rounded-lg text-xs hover:bg-stone-800 transition"
-        >
-          العودة للمتجر
-        </button>
+        <p className="text-[11px] text-stone-500 mb-4">
+          سيتم التواصل معكِ لتأكيد الشحن وموعد التسليم.
+        </p>
+
+        <div className="flex gap-2">
+          {checkoutSuccess.tiktokUrl && (
+            <a
+              href={checkoutSuccess.tiktokUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 bg-black text-white font-medium py-2 rounded-lg text-xs hover:bg-stone-850 transition flex items-center justify-center gap-1.5"
+            >
+              <i className="fa-brands fa-tiktok"></i>
+              <span>تيك توك</span>
+            </a>
+          )}
+          <button
+            onClick={() => setCheckoutSuccess(null)}
+            className="flex-1 bg-stone-900 text-white font-medium py-2 rounded-lg text-xs hover:bg-stone-800 transition"
+          >
+            العودة للمتجر
+          </button>
+        </div>
       </div>
     </div>
   );

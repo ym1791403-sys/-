@@ -20,11 +20,11 @@ const CATEGORIES = [
 ];
 
 const DEFAULT_STORE_SETTINGS = {
-  whatsappNumber: "201026040845",
   storeName: "Chic Shop Galena's",
   tiktokUrl: "https://www.tiktok.com/@jaljola2?_r=1&_t=ZS-9BReZO7XDVs",
   freeShippingThreshold: 600,
-  phoneDisplay: "010 2604 0845"
+  phoneDisplay: "010 2604 0845",
+  whatsappNumber: ""
 };
 
 window.SHIPPING_RATES = SHIPPING_RATES;

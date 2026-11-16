@@ -2,7 +2,6 @@
 // Chic Shop Galena's
 
 function Hero({ storeSettings }) {
-  const hasPhoneSet = Boolean(storeSettings.whatsappNumber && storeSettings.whatsappNumber.trim());
   const hasTiktok = Boolean(storeSettings.tiktokUrl && storeSettings.tiktokUrl.trim());
 
   return (
@@ -46,22 +45,11 @@ function Hero({ storeSettings }) {
                   href={storeSettings.tiktokUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto bg-black hover:bg-stone-850 text-white font-medium px-6 py-3 rounded-full text-xs sm:text-sm border border-stone-700 transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto bg-black hover:bg-stone-850 text-white font-medium px-6 py-3 rounded-full text-xs sm:text-sm border border-stone-700 transition-all flex items-center justify-center gap-2 shadow hover:scale-105"
+                  title="تيك توك"
                 >
                   <i className="fa-brands fa-tiktok text-sm"></i>
-                  <span>تواصل عبر تيك توك</span>
-                </a>
-              )}
-
-              {hasPhoneSet && (
-                <a
-                  href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً، أود الاستفسار والطلب من Chic Shop Galena\'s')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-medium px-6 py-3 rounded-full text-xs sm:text-sm border border-white/20 transition-all flex items-center justify-center gap-2"
-                >
-                  <i className="fa-brands fa-whatsapp text-emerald-400 text-sm"></i>
-                  <span>طلب مباشر عبر واتساب</span>
+                  <span>حساب تيك توك</span>
                 </a>
               )}
             </div>

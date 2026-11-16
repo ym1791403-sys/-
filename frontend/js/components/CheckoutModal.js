@@ -111,10 +111,10 @@ function CheckoutModal({
           <button
             type="submit"
             disabled={isSubmittingOrder}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs shadow flex items-center justify-center gap-2 transition"
+            className="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold py-3 rounded-lg text-xs shadow flex items-center justify-center gap-2 transition"
           >
-            <i className="fa-brands fa-whatsapp text-sm"></i>
-            <span>{isSubmittingOrder ? "جارٍ الإرسال..." : "تأكيد الطلب عبر واتساب"}</span>
+            <i className="fa-solid fa-check text-amber-400"></i>
+            <span>{isSubmittingOrder ? "جارٍ تسجيل الطلب..." : "تأكيد وإرسال الطلب (الدفع عند الاستلام)"}</span>
           </button>
         </form>
       </div>

@@ -10,7 +10,6 @@ function Header({
   setIsWishlistOpen,
   setIsCartOpen
 }) {
-  const hasPhoneSet = Boolean(storeSettings.whatsappNumber && storeSettings.whatsappNumber.trim());
   const hasTiktok = Boolean(storeSettings.tiktokUrl && storeSettings.tiktokUrl.trim());
 
   return (
@@ -61,23 +60,10 @@ function Header({
                 href={storeSettings.tiktokUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-black hover:bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow transition-colors"
+                className="w-9 h-9 rounded-full bg-black hover:bg-stone-850 text-white flex items-center justify-center text-sm shadow transition hover:scale-105 border border-stone-800"
                 title="تيك توك"
               >
-                <i className="fa-brands fa-tiktok text-xs"></i>
-                <span className="hidden sm:inline">تيك توك</span>
-              </a>
-            )}
-
-            {hasPhoneSet && (
-              <a
-                href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً، أود الاستفسار عن إكسسوارات المتجر')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden lg:flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-emerald-100 transition"
-              >
-                <i className="fa-brands fa-whatsapp text-emerald-600"></i>
-                <span>واتساب</span>
+                <i className="fa-brands fa-tiktok"></i>
               </a>
             )}
 

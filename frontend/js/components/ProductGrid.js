@@ -48,7 +48,7 @@ function ProductGrid({
               </div>
               <h3 className="text-base font-bold text-stone-900 mb-1">لا توجد منتجات معروضة حالياً</h3>
               <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                سيتم إضافة المنتجات قريباً، يمكنكِ متابعة المتجر أو التواصل معنا عبر تيك توك وواتساب.
+                سيتم إضافة المنتجات قريباً، يمكنكِ متابعة المتجر أو التواصل معنا عبر تيك توك.
               </p>
             </div>
           ) : filteredProducts.length === 0 ? (

@@ -5,7 +5,6 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 function App() {
   const storeDefaults = window.DEFAULT_STORE_SETTINGS || {
-    whatsappNumber: "201026040845",
     storeName: "Chic Shop Galena's",
     tiktokUrl: "https://www.tiktok.com/@jaljola2?_r=1&_t=ZS-9BReZO7XDVs",
     freeShippingThreshold: 600,
@@ -19,7 +18,6 @@ function App() {
       try {
         const parsed = JSON.parse(saved);
         return {
-          whatsappNumber: parsed.whatsappNumber || storeDefaults.whatsappNumber,
           storeName: "Chic Shop Galena's",
           tiktokUrl: (parsed.tiktokUrl && parsed.tiktokUrl.trim()) ? parsed.tiktokUrl : storeDefaults.tiktokUrl,
           freeShippingThreshold: parsed.freeShippingThreshold || storeDefaults.freeShippingThreshold,
@@ -121,7 +119,6 @@ function App() {
 
   // Settings Temp Form
   const [tempSettings, setTempSettings] = useState({
-    whatsappNumber: storeSettings.whatsappNumber,
     phoneDisplay: storeSettings.phoneDisplay,
     storeName: "Chic Shop Galena's",
     tiktokUrl: storeSettings.tiktokUrl || storeDefaults.tiktokUrl,
@@ -456,14 +453,6 @@ function App() {
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
 
-    if (!storeSettings.whatsappNumber.trim()) {
-      showToast("يرجى إدخال رقم الواتساب الخاص بالمتجر أولاً من لوحة الإدارة", "error");
-      setIsCheckoutModalOpen(false);
-      setIsAdminOpen(true);
-      setAdminTab("settings");
-      return;
-    }
-
     if (!customer.name.trim() || !customer.phone.trim() || !customer.address.trim()) {
       showToast("يرجى ملء الاسم والهاتف والعنوان بالتفصيل", "error");
       return;
@@ -471,7 +460,6 @@ function App() {
 
     setIsSubmittingOrder(true);
     const orderNumber = "ORD-" + Math.floor(100000 + Math.random() * 900000);
-    const dateStr = new Date().toLocaleDateString('ar-EG', { dateStyle: 'medium' });
 
     const orderData = {
       orderNumber,
@@ -498,33 +486,8 @@ function App() {
         await window.db.collection("orders").add(orderData);
       }
     } catch (err) {
-      console.warn(err);
+      console.warn("Order save notice:", err);
     }
-
-    // Build WhatsApp message
-    let message = `طلب جديد من المتجر (${storeSettings.storeName})\n`;
-    message += `رقم الطلب: #${orderNumber}\n`;
-    message += `التاريخ: ${dateStr}\n\n`;
-    message += `بيانات العميل:\n`;
-    message += `• الاسم: ${customer.name.trim()}\n`;
-    message += `• الهاتف: ${customer.phone.trim()}\n`;
-    if (customer.altPhone) message += `• هاتف إضافي: ${customer.altPhone.trim()}\n`;
-    message += `• المحافظة: ${customer.city}\n`;
-    message += `• العنوان بالتفصيل: ${customer.address.trim()}\n`;
-    if (customer.notes.trim()) message += `• ملاحظات: ${customer.notes.trim()}\n`;
-    
-    message += `\nالمنتجات:\n`;
-    cart.forEach((item, index) => {
-      message += `${index + 1}. ${item.name} (${item.color}) - عدد: ${item.quantity} = ${item.quantity * item.price} ج.م\n`;
-    });
-
-    if (includeGiftWrap) {
-      message += `• تغليف هدية: نعم (+35 ج.م)\n`;
-      if (giftNote.trim()) message += `• رسالة الهدية: "${giftNote.trim()}"\n`;
-    }
-
-    message += `\nالشحن (${selectedShipping.city}): ${shippingCost === 0 ? 'مجاني' : shippingCost + ' ج.م'}\n`;
-    message += `المبلغ المطلوب عند الاستلام: ${grandTotal} ج.م\n`;
 
     if (window.confetti) {
       window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -535,18 +498,14 @@ function App() {
       total: grandTotal,
       name: customer.name,
       phone: customer.phone,
-      itemsCount: totalCartItems
+      itemsCount: totalCartItems,
+      tiktokUrl: storeSettings.tiktokUrl
     });
 
     setCart([]);
     setIsCheckoutModalOpen(false);
     setIsSubmittingOrder(false);
-
-    // Open WhatsApp
-    const encoded = encodeURIComponent(message);
-    const cleanPhone = storeSettings.whatsappNumber.replace(/[^0-9]/g, '');
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encoded}`;
-    window.open(waUrl, "_blank");
+    showToast("تم تأكيد طلبكِ بنجاح!");
   };
 
   return (
