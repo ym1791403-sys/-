@@ -100,3 +100,23 @@ html {
 .group:hover .img-zoom {
   transform: scale(1.08);
 }
+
+/* Developer Credit - Exact style as Kayan City */
+.dev-credit {
+  unicode-bidi: isolate;
+  font-size: 0.88rem;
+  color: #94a5bd;
+}
+
+.dev-credit a {
+  color: #C5A059;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.dev-credit a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-shadow: 0 0 10px rgba(197, 160, 89, 0.4);
+}

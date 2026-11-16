@@ -32,19 +32,19 @@ function Footer({ storeSettings, onOpenAdmin }) {
         <div className="pt-5 flex flex-col sm:flex-row items-center justify-between text-stone-400 text-[11px] gap-3">
           <span>جميع الحقوق محفوظة © {new Date().getFullYear()} Chic Shop Galena's</span>
 
-          {/* Developer Direct WhatsApp Link (Joe) */}
-          <a
-            href={`https://wa.me/201095046646?text=${encodeURIComponent('مرحباً جو، تواصلت معك من متجر Chic Shop Galena\'s بخصوص تطوير وبرمجة موقع إلكتروني')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-stone-800 hover:bg-stone-750 text-stone-200 hover:text-white border border-stone-700/80 shadow transition-all hover:scale-105 group"
-            title="تواصل مع المطور عبر واتساب (01095046646)"
-          >
-            <i className="fa-brands fa-whatsapp text-emerald-400 text-sm"></i>
-            <span className="text-stone-300 font-sans">Developed by</span>
-            <strong className="text-amber-400 font-bold group-hover:text-amber-300 font-sans tracking-wide">Joe</strong>
-            <span className="text-[10px] text-stone-400 font-mono hidden sm:inline">(01095046646)</span>
-          </a>
+          {/* Developer Credit - Exactly like Kayan City */}
+          <p className="dev-credit font-sans text-xs sm:text-sm tracking-wide text-stone-400" dir="ltr">
+            Developed by{" "}
+            <a
+              href="https://wa.me/201095046646"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-white font-bold transition hover:underline"
+              title="تواصل مع المطور عبر واتساب"
+            >
+              JOO
+            </a>
+          </p>
 
           <button 
             onClick={onOpenAdmin}
