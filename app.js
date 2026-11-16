@@ -56,18 +56,18 @@ function App() {
       try {
         const parsed = JSON.parse(saved);
         return {
-          whatsappNumber: parsed.whatsappNumber || "",
+          whatsappNumber: parsed.whatsappNumber || "201026040845",
           storeName: "Chic Shop Galena's",
           freeShippingThreshold: parsed.freeShippingThreshold || 600,
-          phoneDisplay: parsed.phoneDisplay || ""
+          phoneDisplay: parsed.phoneDisplay || "010 2604 0845"
         };
       } catch (e) {}
     }
     return {
-      whatsappNumber: "",
+      whatsappNumber: "201026040845",
       storeName: "Chic Shop Galena's",
       freeShippingThreshold: 600,
-      phoneDisplay: ""
+      phoneDisplay: "010 2604 0845"
     };
   });
 
@@ -1002,11 +1002,14 @@ function App() {
             )}
           </div>
 
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between text-stone-500 text-[11px] gap-2">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between text-stone-400 text-[11px] gap-2">
             <span>جميع الحقوق محفوظة © {new Date().getFullYear()} Chic Shop Galena's</span>
+            <span className="text-stone-400 font-sans tracking-wide">
+              Developed by <strong className="text-amber-400 font-medium">Joe</strong>
+            </span>
             <button 
               onClick={() => { setAdminTab("products"); setIsAdminOpen(true); }}
-              className="hover:text-stone-300 underline"
+              className="hover:text-stone-200 underline"
             >
               إدارة المتجر
             </button>
