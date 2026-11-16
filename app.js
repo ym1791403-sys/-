@@ -114,12 +114,51 @@ function App() {
     category: "necklaces",
     price: "",
     oldPrice: "",
-    imageUrl: "",
+    imageData: "",
     colors: "ذهبي, فضي",
     description: "",
     material: ""
   });
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Function to process & compress image from device
+  const handleImageFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast("يرجى اختيار ملف صورة صالح (JPG أو PNG)", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        setNewProduct(prev => ({ ...prev, imageData: compressed }));
+        showToast("تم اختيار الصورة بنجاح");
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Settings Temp Form
   const [tempSettings, setTempSettings] = useState({
@@ -325,7 +364,7 @@ function App() {
       inStock: true,
       colors: parsedColors.length > 0 ? parsedColors : ["ذهبي"],
       images: [
-        newProduct.imageUrl.trim() || "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop"
+        newProduct.imageData || "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop"
       ],
       description: newProduct.description.trim() || "قطعة إكسسوار أنيقة بتصميم عصري راقي.",
       material: newProduct.material.trim() || "مقاوم لتغير اللون ومضاد للحساسية.",
@@ -346,7 +385,7 @@ function App() {
         category: "necklaces",
         price: "",
         oldPrice: "",
-        imageUrl: "",
+        imageData: "",
         colors: "ذهبي, فضي",
         description: "",
         material: ""
@@ -1554,14 +1593,53 @@ function App() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-stone-700 mb-1">رابط صورة المنتج (URL)</label>
-                    <input
-                      type="url"
-                      value={newProduct.imageUrl}
-                      onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full px-3 py-2 rounded-lg border border-stone-300"
-                    />
+                    <label className="block font-bold text-stone-700 mb-1">صورة المنتج</label>
+                    {newProduct.imageData ? (
+                      <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-stone-300 shadow-sm mx-auto group">
+                        <img src={newProduct.imageData} alt="معاينة" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setNewProduct(prev => ({ ...prev, imageData: "" }))}
+                          className="absolute inset-0 bg-stone-900/70 text-white opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 font-bold text-xs"
+                        >
+                          <i className="fa-solid fa-trash-can text-sm"></i>
+                          <span>تغيير الصورة</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleImageFile(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
+                          isDragging ? "border-stone-900 bg-stone-100" : "border-stone-300 bg-stone-50 hover:bg-stone-100"
+                        }`}
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleImageFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <div className="w-9 h-9 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center mx-auto mb-2 text-sm">
+                          <i className="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <p className="font-bold text-stone-800 text-xs">اسحبي صورة المنتج هنا أو اضغطي للاختيار</p>
+                        <span className="text-[10px] text-stone-500 block mt-0.5">اختاري أي صورة من جهازكِ أو هاتفكِ مباشرة</span>
+                      </div>
+                    )}
                   </div>
 
                   <div>
