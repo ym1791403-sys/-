@@ -58,7 +58,7 @@ function App() {
         return {
           whatsappNumber: parsed.whatsappNumber || "201026040845",
           storeName: "Chic Shop Galena's",
-          tiktokUrl: parsed.tiktokUrl || "",
+          tiktokUrl: (parsed.tiktokUrl && parsed.tiktokUrl.trim()) ? parsed.tiktokUrl : "https://www.tiktok.com/@jaljola2?_r=1&_t=ZS-9BReZO7XDVs",
           freeShippingThreshold: parsed.freeShippingThreshold || 600,
           phoneDisplay: parsed.phoneDisplay || "010 2604 0845"
         };
@@ -67,7 +67,7 @@ function App() {
     return {
       whatsappNumber: "201026040845",
       storeName: "Chic Shop Galena's",
-      tiktokUrl: "",
+      tiktokUrl: "https://www.tiktok.com/@jaljola2?_r=1&_t=ZS-9BReZO7XDVs",
       freeShippingThreshold: 600,
       phoneDisplay: "010 2604 0845"
     };
@@ -167,7 +167,7 @@ function App() {
     whatsappNumber: storeSettings.whatsappNumber,
     phoneDisplay: storeSettings.phoneDisplay,
     storeName: "Chic Shop Galena's",
-    tiktokUrl: storeSettings.tiktokUrl || "",
+    tiktokUrl: storeSettings.tiktokUrl || "https://www.tiktok.com/@jaljola2?_r=1&_t=ZS-9BReZO7XDVs",
     freeShippingThreshold: storeSettings.freeShippingThreshold
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -241,8 +241,9 @@ function App() {
         if (doc.exists) {
           const data = doc.data();
           const cleanName = "Chic Shop Galena's";
-          setStoreSettings(prev => ({ ...prev, ...data, storeName: cleanName }));
-          setTempSettings(prev => ({ ...prev, ...data, storeName: cleanName }));
+          const tiktok = (data.tiktokUrl && data.tiktokUrl.trim()) ? data.tiktokUrl : "https://www.tiktok.com/@jaljola2?_r=1&_t=ZS-9BReZO7XDVs";
+          setStoreSettings(prev => ({ ...prev, ...data, storeName: cleanName, tiktokUrl: tiktok }));
+          setTempSettings(prev => ({ ...prev, ...data, storeName: cleanName, tiktokUrl: tiktok }));
         }
       },
       () => {}
