@@ -59,9 +59,18 @@ function App() {
   // Store Settings (Synced with Firestore 'settings/store')
   const [storeSettings, setStoreSettings] = useState(() => {
     const saved = localStorage.getItem("aura_settings");
-    return saved ? JSON.parse(saved) : {
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (!parsed.storeName || parsed.storeName.includes("AURA")) {
+          parsed.storeName = "𝐂𝐡𝐢𝐜 𝐒𝐡𝐨𝐩 𝐆𝐚𝐥𝐞𝐧𝐚'𝐬";
+        }
+        return parsed;
+      } catch (e) {}
+    }
+    return {
       whatsappNumber: "",
-      storeName: "AURA Accessories",
+      storeName: "𝐂𝐡𝐢𝐜 𝐒𝐡𝐨𝐩 𝐆𝐚𝐥𝐞𝐧𝐚'𝐬",
       freeShippingThreshold: 600,
       phoneDisplay: ""
     };
