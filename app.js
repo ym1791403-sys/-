@@ -58,6 +58,7 @@ function App() {
         return {
           whatsappNumber: parsed.whatsappNumber || "201026040845",
           storeName: "Chic Shop Galena's",
+          tiktokUrl: parsed.tiktokUrl || "",
           freeShippingThreshold: parsed.freeShippingThreshold || 600,
           phoneDisplay: parsed.phoneDisplay || "010 2604 0845"
         };
@@ -66,6 +67,7 @@ function App() {
     return {
       whatsappNumber: "201026040845",
       storeName: "Chic Shop Galena's",
+      tiktokUrl: "",
       freeShippingThreshold: 600,
       phoneDisplay: "010 2604 0845"
     };
@@ -165,6 +167,7 @@ function App() {
     whatsappNumber: storeSettings.whatsappNumber,
     phoneDisplay: storeSettings.phoneDisplay,
     storeName: "Chic Shop Galena's",
+    tiktokUrl: storeSettings.tiktokUrl || "",
     freeShippingThreshold: storeSettings.freeShippingThreshold
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -588,7 +591,8 @@ function App() {
     window.open(waUrl, "_blank");
   };
 
-  const hasPhoneSet = Boolean(storeSettings.whatsappNumber.trim());
+  const hasPhoneSet = Boolean(storeSettings.whatsappNumber && storeSettings.whatsappNumber.trim());
+  const hasTiktok = Boolean(storeSettings.tiktokUrl && storeSettings.tiktokUrl.trim());
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-stone-800">
@@ -641,6 +645,19 @@ function App() {
 
           {/* Header Actions */}
           <div className="flex items-center gap-2.5">
+            {hasTiktok && (
+              <a
+                href={storeSettings.tiktokUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 bg-black hover:bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow transition-colors"
+                title="تيك توك"
+              >
+                <i className="fa-brands fa-tiktok text-xs"></i>
+                <span className="hidden sm:inline">تيك توك</span>
+              </a>
+            )}
+
             {hasPhoneSet && (
               <a
                 href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً، أود الاستفسار عن إكسسوارات المتجر')}`}
@@ -732,6 +749,18 @@ function App() {
                   <span>تصفحي المنتجات الآن</span>
                   <i className="fa-solid fa-arrow-left text-xs"></i>
                 </a>
+
+                {hasTiktok && (
+                  <a
+                    href={storeSettings.tiktokUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto bg-black hover:bg-stone-850 text-white font-medium px-6 py-3 rounded-full text-xs sm:text-sm border border-stone-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-brands fa-tiktok text-sm"></i>
+                    <span>تواصل عبر تيك توك</span>
+                  </a>
+                )}
 
                 {hasPhoneSet && (
                   <a
@@ -988,8 +1017,19 @@ function App() {
               <span className="font-playfair text-lg font-bold text-white block">Chic Shop Galena's</span>
               <p className="text-stone-400 text-xs mt-0.5">متجر إلكتروني متخصص في الإكسسوارات النسائية المطلية.</p>
             </div>
-            {hasPhoneSet && (
-              <div>
+            <div className="flex flex-wrap items-center gap-4">
+              {hasTiktok && (
+                <a 
+                  href={storeSettings.tiktokUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-stone-300 hover:text-white flex items-center gap-1.5"
+                >
+                  <i className="fa-brands fa-tiktok text-white text-sm"></i>
+                  <span>حساب تيك توك</span>
+                </a>
+              )}
+              {hasPhoneSet && (
                 <a 
                   href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}`} 
                   target="_blank" 
@@ -998,8 +1038,8 @@ function App() {
                   <i className="fa-brands fa-whatsapp text-emerald-400"></i>
                   <span>واتساب: {storeSettings.phoneDisplay || storeSettings.whatsappNumber}</span>
                 </a>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between text-stone-400 text-[11px] gap-2">
@@ -1026,18 +1066,32 @@ function App() {
         <i className="fa-solid fa-gear text-xs"></i>
       </button>
 
-      {/* Floating WhatsApp Action Button */}
-      {hasPhoneSet && (
-        <a
-          href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً، أود الاستفسار والطلب')}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fixed bottom-4 right-4 z-40 bg-emerald-600 hover:bg-emerald-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl transition-transform hover:scale-105"
-          title="تواصل واتساب"
-        >
-          <i className="fa-brands fa-whatsapp"></i>
-        </a>
-      )}
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2.5 items-end">
+        {hasTiktok && (
+          <a
+            href={storeSettings.tiktokUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-black hover:bg-stone-850 text-white w-12 h-12 rounded-full shadow-xl flex items-center justify-center text-xl transition-transform hover:scale-110 border border-stone-700"
+            title="تواصل عبر تيك توك"
+          >
+            <i className="fa-brands fa-tiktok"></i>
+          </a>
+        )}
+
+        {hasPhoneSet && (
+          <a
+            href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً، أود الاستفسار والطلب')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl transition-transform hover:scale-105"
+            title="تواصل واتساب"
+          >
+            <i className="fa-brands fa-whatsapp"></i>
+          </a>
+        )}
+      </div>
 
       {/* ============================================================== */}
       {/* CART DRAWER */}
@@ -1773,6 +1827,22 @@ function App() {
                     />
                     <span className="text-[10px] text-stone-400 block mt-0.5">
                       هذا الرقم هو الذي يتم تحويل رسائل وفواتير الطلبات إليه مباشرة
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1">
+                      رابط حساب تيك توك للتواصل (TikTok URL)
+                    </label>
+                    <input
+                      type="url"
+                      value={tempSettings.tiktokUrl || ""}
+                      onChange={(e) => setTempSettings({ ...tempSettings, tiktokUrl: e.target.value })}
+                      placeholder="https://www.tiktok.com/@..."
+                      className="w-full px-3 py-2 rounded-lg border border-stone-300 font-mono text-xs"
+                    />
+                    <span className="text-[10px] text-stone-400 block mt-0.5">
+                      الصقي رابط حساب تيك توك ليظهر زر التواصل المباشر عبر تيك توك لجميع الزبائن فوراً
                     </span>
                   </div>
 
