@@ -60,6 +60,7 @@ function App() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [quickViewColor, setQuickViewColor] = useState("");
+  const [policyModal, setPolicyModal] = useState(null); // 'privacy' | 'returns' | 'terms' | 'shipping'
 
   // Admin Dashboard State (Discreet trigger)
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -550,6 +551,14 @@ function App() {
       <Footer
         storeSettings={storeSettings}
         onOpenAdmin={() => { setAdminTab("products"); setIsAdminOpen(true); }}
+        onOpenPolicy={(tab) => setPolicyModal(tab)}
+      />
+
+      {/* Legal & Privacy Policy Modal */}
+      <PolicyModal
+        activeTab={policyModal}
+        onClose={() => setPolicyModal(null)}
+        onSelectTab={(tab) => setPolicyModal(tab)}
       />
 
       {/* Floating Action Buttons & Discreet Control Trigger */}

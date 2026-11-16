@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/privacy", "destination": "/frontend/privacy.html" },
+    { "source": "/privacy.html", "destination": "/frontend/privacy.html" },
+    { "source": "/terms", "destination": "/frontend/privacy.html" },
+    { "source": "/returns", "destination": "/frontend/privacy.html" }
+  ]
+}

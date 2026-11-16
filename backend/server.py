@@ -42,6 +42,12 @@ def save_orders(orders):
 def index():
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
+@app.route('/privacy')
+@app.route('/terms')
+@app.route('/returns')
+def privacy_page():
+    return send_from_directory(FRONTEND_DIR, 'privacy.html')
+
 @app.route('/<path:path>')
 def static_files(path):
     # Check inside frontend directory
