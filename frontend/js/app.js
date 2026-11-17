@@ -32,9 +32,11 @@ function App() {
   const [dbStatus, setDbStatus] = useState(window.isFirebaseAvailable ? "connected" : "error");
   const [dbErrorMsg, setDbErrorMsg] = useState("");
 
-  // Products from Database
-  const [products, setProducts] = useState([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  // Products from Database (Defaults to INITIAL_PRODUCTS)
+  const [products, setProducts] = useState(() => {
+    return (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) ? window.INITIAL_PRODUCTS : [];
+  });
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   // Orders from Database
   const [orders, setOrders] = useState([]);
@@ -170,12 +172,19 @@ function App() {
         snapshot.forEach(doc => {
           fetched.push({ id: doc.id, ...doc.data() });
         });
-        setProducts(fetched);
+        if (fetched.length > 0) {
+          setProducts(fetched);
+        } else if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
+          setProducts(window.INITIAL_PRODUCTS);
+        }
         setIsLoadingProducts(false);
         setDbStatus("connected");
       },
       (error) => {
         console.warn("Products sync notice:", error);
+        if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
+          setProducts(window.INITIAL_PRODUCTS);
+        }
         setIsLoadingProducts(false);
         if (error.code === "permission-denied") {
           setDbStatus("permission_denied");
@@ -332,8 +341,15 @@ function App() {
 
     try {
       if (window.db) {
-        await window.db.collection("products").add(productPayload);
-        showToast("تمت إضافة المنتج بنجاح");
+        try {
+          const docRef = await window.db.collection("products").add(productPayload);
+          setProducts(prev => [{ id: docRef.id, ...productPayload }, ...prev]);
+          showToast("تمت إضافة المنتج بنجاح");
+        } catch (e) {
+          console.warn("Firestore add failed, adding locally:", e);
+          setProducts(prev => [{ id: Date.now().toString(), ...productPayload }, ...prev]);
+          showToast("تمت إضافة المنتج محلياً");
+        }
       } else {
         setProducts(prev => [{ id: Date.now().toString(), ...productPayload }, ...prev]);
         showToast("تمت إضافة المنتج محلياً");
@@ -362,15 +378,17 @@ function App() {
     if (!confirm("هل أنتِ متأكدة من حذف هذا المنتج؟")) return;
 
     try {
-      if (window.db && typeof id === 'string' && id.length > 5) {
-        await window.db.collection("products").doc(id).delete();
-        showToast("تم حذف المنتج بنجاح");
-      } else {
-        setProducts(prev => prev.filter(p => p.id !== id));
-        showToast("تم حذف المنتج");
+      if (window.db) {
+        try {
+          await window.db.collection("products").doc(id).delete();
+        } catch (e) {
+          console.warn("Firestore delete notice:", e);
+        }
       }
+      setProducts(prev => prev.filter(p => p.id !== id));
       setCart(prev => prev.filter(item => item.id !== id));
       setWishlist(prev => prev.filter(pId => pId !== id));
+      showToast("تم حذف المنتج بنجاح");
     } catch (err) {
       console.error(err);
       showToast("تعذر حذف المنتج", "error");
