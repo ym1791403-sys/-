@@ -25,9 +25,73 @@ function AdminModal({
   tempSettings,
   setTempSettings,
   handleSaveSettings,
-  isSavingSettings
+  isSavingSettings,
+  updateProductPrice,
+  updateProduct,
+  reorderProducts,
+  resetDefaultProducts
 }) {
   if (!isAdminOpen) return null;
+
+  const [editingProduct, setEditingProduct] = React.useState(null);
+  const [quickPrices, setQuickPrices] = React.useState({});
+  const [isSavingEdit, setIsSavingEdit] = React.useState(false);
+
+  const handleMove = (index, dir) => {
+    const target = index + dir;
+    if (target < 0 || target >= products.length) return;
+    const reordered = [...products];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(target, 0, moved);
+    if (reorderProducts) reorderProducts(reordered);
+  };
+
+  const startFullEdit = (p) => {
+    setEditingProduct({
+      id: p.id,
+      name: p.name || "",
+      category: p.category || "necklaces",
+      price: p.price || "",
+      oldPrice: p.oldPrice || "",
+      colors: Array.isArray(p.colors) ? p.colors.join(", ") : (p.colors || ""),
+      description: p.description || "",
+      material: p.material || "",
+      images: p.images || [],
+      inStock: p.inStock !== false
+    });
+  };
+
+  const handleSaveFullEdit = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingProduct.name || !editingProduct.price) {
+      alert("يرجى إدخال اسم المنتج والسعر");
+      return;
+    }
+    setIsSavingEdit(true);
+    const parsedColors = editingProduct.colors
+      ? (typeof editingProduct.colors === "string"
+          ? editingProduct.colors.split(",").map(c => c.trim()).filter(Boolean)
+          : editingProduct.colors)
+      : ["ذهبي"];
+
+    const payload = {
+      name: editingProduct.name.trim(),
+      category: editingProduct.category,
+      price: parseFloat(editingProduct.price),
+      oldPrice: editingProduct.oldPrice ? parseFloat(editingProduct.oldPrice) : null,
+      colors: parsedColors,
+      description: editingProduct.description ? editingProduct.description.trim() : "",
+      material: editingProduct.material ? editingProduct.material.trim() : "",
+      images: editingProduct.images && editingProduct.images.length > 0 ? editingProduct.images : [],
+      inStock: editingProduct.inStock
+    };
+
+    if (updateProduct) {
+      await updateProduct(editingProduct.id, payload);
+    }
+    setIsSavingEdit(false);
+    setEditingProduct(null);
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-5">
@@ -119,15 +183,155 @@ function AdminModal({
           {/* 1. PRODUCTS TAB */}
           {adminTab === "products" && (
             <div className="space-y-3">
-              <div className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-200">
-                <span className="text-stone-700 font-bold">قائمة المنتجات الحالية ({products.length})</span>
-                <button
-                  onClick={() => setAdminTab("add")}
-                  className="bg-stone-900 hover:bg-stone-800 text-white px-3 py-1 rounded-lg text-xs font-bold transition"
-                >
-                  + إضافة منتج جديد
-                </button>
+              <div className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-200 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-700 font-bold">قائمة المنتجات ({products.length})</span>
+                  <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-bold">
+                    يمكنكِ تعديل أي سعر وترتيب مباشرة
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {resetDefaultProducts && (
+                    <button
+                      type="button"
+                      onClick={resetDefaultProducts}
+                      className="text-[10px] text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-300 px-2 py-1 rounded-lg font-bold transition flex items-center gap-1 shadow-sm"
+                      title="استعادة الأسعار والتشكيلة الافتراضية"
+                    >
+                      <i className="fa-solid fa-rotate-left"></i>
+                      <span>استعادة الأصلية</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setAdminTab("add")}
+                    className="bg-stone-900 hover:bg-stone-800 text-white px-3 py-1 rounded-lg text-xs font-bold transition shadow-sm"
+                  >
+                    + إضافة منتج جديد
+                  </button>
+                </div>
               </div>
+
+              {/* Full Edit Form Modal Box */}
+              {editingProduct && (
+                <div className="bg-amber-50/90 p-4 rounded-xl border-2 border-amber-400 space-y-3 mb-3 shadow-md animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-pen-to-square text-amber-800 text-sm"></i>
+                      <h4 className="font-bold text-stone-900 text-xs sm:text-sm">تعديل بيانات وسعر المنتج</h4>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setEditingProduct(null)}
+                      className="text-stone-400 hover:text-stone-800 p-1 text-sm"
+                      title="إغلاق"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveFullEdit} className="space-y-3">
+                    <div>
+                      <label className="block font-bold text-stone-700 mb-1">اسم المنتج *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingProduct.name}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 focus:outline-none focus:border-amber-600 bg-white font-medium"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-stone-700 mb-1">القسم *</label>
+                        <select
+                          value={editingProduct.category}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white focus:outline-none focus:border-amber-600"
+                        >
+                          {categories.filter(c => c.id !== "all").map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block font-bold text-amber-900 mb-1">السعر المطلوب (ج.م) *</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingProduct.price}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                          className="w-full px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-amber-500 focus:outline-none focus:border-amber-700 bg-white text-stone-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-stone-700 mb-1">السعر قبل الخصم (مشطوب)</label>
+                        <input
+                          type="number"
+                          value={editingProduct.oldPrice || ""}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, oldPrice: e.target.value })}
+                          placeholder="مثال: 320"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 focus:outline-none focus:border-amber-600 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-stone-700 mb-1">الألوان المتاحة</label>
+                        <input
+                          type="text"
+                          value={editingProduct.colors || ""}
+                          onChange={(e) => setEditingProduct({ ...editingProduct, colors: e.target.value })}
+                          placeholder="ذهبي, فضي"
+                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 focus:outline-none focus:border-amber-600 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-stone-700 mb-1">وصف المنتج</label>
+                      <textarea
+                        rows="2"
+                        value={editingProduct.description || ""}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 focus:outline-none focus:border-amber-600 bg-white"
+                      ></textarea>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="inStockEdit"
+                        checked={editingProduct.inStock !== false}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, inStock: e.target.checked })}
+                        className="w-4 h-4 text-amber-600 rounded"
+                      />
+                      <label htmlFor="inStockEdit" className="font-bold text-stone-800 text-xs cursor-pointer">
+                        المنتج متوفر بالمخزون حالياً
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t border-amber-200">
+                      <button
+                        type="button"
+                        onClick={() => setEditingProduct(null)}
+                        className="px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 font-bold hover:bg-stone-100 transition"
+                      >
+                        إلغاء
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingEdit}
+                        className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition shadow"
+                      >
+                        <i className="fa-solid fa-check"></i>
+                        <span>{isSavingEdit ? "جارٍ الحفظ..." : "حفظ التعديلات"}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               {products.length === 0 ? (
                 <div className="text-center py-12 text-stone-400">
@@ -140,29 +344,115 @@ function AdminModal({
                   </button>
                 </div>
               ) : (
-                <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
-                  {products.map(p => (
-                    <div key={p.id} className="p-3 flex items-center justify-between gap-3 hover:bg-stone-50 transition">
-                      <img 
-                        src={(p.images && p.images[0]) || ""} 
-                        alt={p.name} 
-                        className="w-10 h-10 rounded-lg object-cover border" 
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h5 className="font-bold text-stone-900 truncate">{p.name}</h5>
-                        <span className="text-[11px] text-stone-500">
-                          {p.categoryName} — <strong className="text-stone-900">{p.price} ج.م</strong>
-                        </span>
+                <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                  {products.map((p, idx) => {
+                    const currentPriceVal = quickPrices[p.id] !== undefined ? quickPrices[p.id] : p.price;
+                    const isPriceChanged = Number(currentPriceVal) !== Number(p.price);
+
+                    return (
+                      <div key={p.id} className="p-3 flex items-center justify-between gap-2.5 sm:gap-3 hover:bg-stone-50 transition flex-wrap sm:flex-nowrap">
+                        
+                        {/* Reorder Buttons */}
+                        <div className="flex flex-col gap-0.5 self-center flex-shrink-0">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => handleMove(idx, -1)}
+                            className={`w-6 h-5 flex items-center justify-center rounded text-[10px] transition ${
+                              idx === 0 ? "text-stone-300 cursor-not-allowed" : "text-stone-600 hover:bg-stone-200 hover:text-stone-900"
+                            }`}
+                            title="تحريك لأعلى (تقديم الترتيب)"
+                          >
+                            <i className="fa-solid fa-chevron-up"></i>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === products.length - 1}
+                            onClick={() => handleMove(idx, 1)}
+                            className={`w-6 h-5 flex items-center justify-center rounded text-[10px] transition ${
+                              idx === products.length - 1 ? "text-stone-300 cursor-not-allowed" : "text-stone-600 hover:bg-stone-200 hover:text-stone-900"
+                            }`}
+                            title="تحريك لأسفل (تأخير الترتيب)"
+                          >
+                            <i className="fa-solid fa-chevron-down"></i>
+                          </button>
+                        </div>
+
+                        {/* Product Image */}
+                        <img 
+                          src={(p.images && p.images[0]) || ""} 
+                          alt={p.name} 
+                          className="w-12 h-12 rounded-lg object-cover border shadow-sm flex-shrink-0" 
+                        />
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-[130px]">
+                          <h5 className="font-bold text-stone-900 text-xs sm:text-sm line-clamp-1">{p.name}</h5>
+                          <div className="flex items-center gap-1.5 text-[11px] text-stone-500 mt-0.5">
+                            <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded text-[10px]">{p.categoryName || p.category}</span>
+                            {p.oldPrice && (
+                              <span className="line-through text-stone-400 text-[10px]">{p.oldPrice} ج.م</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Quick Price Editor */}
+                        <div className="flex items-center gap-1 bg-stone-100/80 border border-stone-200 p-1 rounded-lg flex-shrink-0">
+                          <label className="text-[10px] text-stone-500 font-bold px-0.5">السعر:</label>
+                          <input
+                            type="number"
+                            value={currentPriceVal}
+                            onChange={(e) => setQuickPrices(prev => ({ ...prev, [p.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (updateProductPrice) updateProductPrice(p.id, currentPriceVal);
+                              }
+                            }}
+                            className={`w-16 px-1.5 py-1 text-center font-bold text-xs rounded border transition focus:outline-none ${
+                              isPriceChanged ? "border-amber-500 bg-amber-50 text-amber-900 ring-1 ring-amber-400" : "border-stone-300 bg-white text-stone-900"
+                            }`}
+                            title="اكتبي السعر واضغطي حفظ"
+                          />
+                          <span className="text-[10px] text-stone-600 font-bold px-0.5">ج.م</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (updateProductPrice) updateProductPrice(p.id, currentPriceVal);
+                            }}
+                            className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition shadow-sm ${
+                              isPriceChanged ? "bg-amber-600 hover:bg-amber-700 text-white animate-pulse" : "bg-stone-900 hover:bg-stone-800 text-white"
+                            }`}
+                            title="حفظ السعر الجديد"
+                          >
+                            <i className="fa-solid fa-check text-[9px]"></i>
+                            <span>حفظ</span>
+                          </button>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => startFullEdit(p)}
+                            className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition"
+                            title="تعديل كافة تفاصيل المنتج"
+                          >
+                            <i className="fa-solid fa-pen-to-square text-xs"></i>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteProduct(p.id)}
+                            className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="حذف المنتج"
+                          >
+                            <i className="fa-solid fa-trash-can text-xs"></i>
+                          </button>
+                        </div>
+
                       </div>
-                      <button
-                        onClick={() => deleteProduct(p.id)}
-                        className="text-stone-400 hover:text-rose-600 p-2 transition"
-                        title="حذف المنتج"
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

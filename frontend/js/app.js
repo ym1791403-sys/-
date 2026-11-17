@@ -32,8 +32,17 @@ function App() {
   const [dbStatus, setDbStatus] = useState(window.isFirebaseAvailable ? "connected" : "error");
   const [dbErrorMsg, setDbErrorMsg] = useState("");
 
-  // Products from Database (Defaults to INITIAL_PRODUCTS)
+  // Products from Database / LocalStorage (Defaults to INITIAL_PRODUCTS)
   const [products, setProducts] = useState(() => {
+    const saved = localStorage.getItem("store_products");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
     return (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) ? window.INITIAL_PRODUCTS : [];
   });
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -174,14 +183,40 @@ function App() {
         });
         if (fetched.length > 0) {
           setProducts(fetched);
-        } else if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
-          setProducts(window.INITIAL_PRODUCTS);
+          localStorage.setItem("store_products", JSON.stringify(fetched));
+        } else {
+          const saved = localStorage.getItem("store_products");
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setProducts(parsed);
+                setIsLoadingProducts(false);
+                setDbStatus("connected");
+                return;
+              }
+            } catch (e) {}
+          }
+          if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
+            setProducts(window.INITIAL_PRODUCTS);
+          }
         }
         setIsLoadingProducts(false);
         setDbStatus("connected");
       },
       (error) => {
         console.warn("Products sync notice:", error);
+        const saved = localStorage.getItem("store_products");
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProducts(parsed);
+              setIsLoadingProducts(false);
+              return;
+            }
+          } catch (e) {}
+        }
         if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
           setProducts(window.INITIAL_PRODUCTS);
         }
@@ -340,20 +375,20 @@ function App() {
     };
 
     try {
+      let createdId = Date.now().toString();
       if (window.db) {
         try {
           const docRef = await window.db.collection("products").add(productPayload);
-          setProducts(prev => [{ id: docRef.id, ...productPayload }, ...prev]);
-          showToast("تمت إضافة المنتج بنجاح");
+          createdId = docRef.id;
         } catch (e) {
           console.warn("Firestore add failed, adding locally:", e);
-          setProducts(prev => [{ id: Date.now().toString(), ...productPayload }, ...prev]);
-          showToast("تمت إضافة المنتج محلياً");
         }
-      } else {
-        setProducts(prev => [{ id: Date.now().toString(), ...productPayload }, ...prev]);
-        showToast("تمت إضافة المنتج محلياً");
       }
+
+      const updatedList = [{ id: createdId, ...productPayload }, ...products];
+      setProducts(updatedList);
+      localStorage.setItem("store_products", JSON.stringify(updatedList));
+      showToast("تمت إضافة المنتج بنجاح");
 
       setNewProduct({
         name: "",
@@ -385,13 +420,120 @@ function App() {
           console.warn("Firestore delete notice:", e);
         }
       }
-      setProducts(prev => prev.filter(p => p.id !== id));
+      const updatedList = products.filter(p => p.id !== id);
+      setProducts(updatedList);
+      localStorage.setItem("store_products", JSON.stringify(updatedList));
       setCart(prev => prev.filter(item => item.id !== id));
       setWishlist(prev => prev.filter(pId => pId !== id));
       showToast("تم حذف المنتج بنجاح");
     } catch (err) {
       console.error(err);
       showToast("تعذر حذف المنتج", "error");
+    }
+  };
+
+  // Quick In-Place Price Update
+  const updateProductPrice = async (id, newPrice, newOldPrice = null) => {
+    const numPrice = Number(newPrice);
+    if (isNaN(numPrice) || numPrice <= 0) {
+      showToast("يرجى إدخال سعر صحيح أكبر من الصفر", "error");
+      return false;
+    }
+
+    const updated = products.map(p => {
+      if (p.id === id) {
+        const item = { ...p, price: numPrice };
+        if (newOldPrice !== null && newOldPrice !== undefined && newOldPrice !== "") {
+          item.oldPrice = Number(newOldPrice);
+        }
+        return item;
+      }
+      return p;
+    });
+
+    setProducts(updated);
+    localStorage.setItem("store_products", JSON.stringify(updated));
+
+    // Update in cart if active
+    setCart(prev => prev.map(item => item.id === id ? { ...item, price: numPrice } : item));
+
+    if (window.db) {
+      try {
+        const payload = { price: numPrice };
+        if (newOldPrice !== null && newOldPrice !== undefined && newOldPrice !== "") {
+          payload.oldPrice = Number(newOldPrice);
+        }
+        await window.db.collection("products").doc(id).set(payload, { merge: true });
+      } catch (e) {
+        console.warn("Firestore price update notice:", e);
+      }
+    }
+
+    showToast("تم حفظ السعر الجديد بنجاح!");
+    return true;
+  };
+
+  // Full Product Update
+  const updateProduct = async (id, updatedFields) => {
+    if (!updatedFields.name || !updatedFields.price) {
+      showToast("يرجى إدخال اسم المنتج والسعر", "error");
+      return false;
+    }
+
+    const numPrice = Number(updatedFields.price);
+    const numOldPrice = updatedFields.oldPrice ? Number(updatedFields.oldPrice) : null;
+    const catObj = (window.CATEGORIES || []).find(c => c.id === updatedFields.category);
+
+    const updated = products.map(p => {
+      if (p.id === id) {
+        return {
+          ...p,
+          ...updatedFields,
+          price: numPrice,
+          oldPrice: numOldPrice,
+          categoryName: catObj ? catObj.name : p.categoryName
+        };
+      }
+      return p;
+    });
+
+    setProducts(updated);
+    localStorage.setItem("store_products", JSON.stringify(updated));
+
+    // Update cart
+    setCart(prev => prev.map(item => item.id === id ? { ...item, name: updatedFields.name, price: numPrice } : item));
+
+    if (window.db) {
+      try {
+        await window.db.collection("products").doc(id).set({
+          ...updatedFields,
+          price: numPrice,
+          oldPrice: numOldPrice,
+          categoryName: catObj ? catObj.name : undefined
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Firestore product update:", e);
+      }
+    }
+
+    showToast("تم تحديث بيانات المنتج بنجاح!");
+    return true;
+  };
+
+  // Reorder Products (Move Up / Down)
+  const reorderProducts = (reordered) => {
+    setProducts(reordered);
+    localStorage.setItem("store_products", JSON.stringify(reordered));
+    showToast("تم تحديث ترتيب المنتجات بنجاح");
+  };
+
+  // Reset to Initial Products
+  const resetDefaultProducts = () => {
+    if (!confirm("هل ترغبين في استعادة التشكيلة والأسعار الأصلية الـ 6؟")) return;
+    if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
+      setProducts(window.INITIAL_PRODUCTS);
+      localStorage.setItem("store_products", JSON.stringify(window.INITIAL_PRODUCTS));
+      showToast("تم استعادة التشكيلة والأسعار الأصلية");
     }
   };
 
@@ -665,6 +807,10 @@ function App() {
         setTempSettings={setTempSettings}
         handleSaveSettings={handleSaveSettings}
         isSavingSettings={isSavingSettings}
+        updateProductPrice={updateProductPrice}
+        updateProduct={updateProduct}
+        reorderProducts={reorderProducts}
+        resetDefaultProducts={resetDefaultProducts}
       />
 
     </div>
