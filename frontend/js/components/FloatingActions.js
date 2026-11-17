@@ -6,13 +6,13 @@ function FloatingActions({ storeSettings, onOpenAdmin }) {
 
   return (
     <>
-      {/* Discreet Admin Trigger (Small gear icon like Kayan City) */}
+      {/* Extremely Discreet Admin Trigger - Blends into background */}
       <button
         onClick={onOpenAdmin}
-        className="fixed bottom-4 left-4 z-40 w-8 h-8 rounded-full bg-stone-900/60 hover:bg-stone-900 text-stone-300 hover:text-white shadow flex items-center justify-center transition-all backdrop-blur-sm border border-stone-700/50"
-        title="إدارة المتجر"
+        className="fixed bottom-3 left-3 z-30 w-6 h-6 rounded-full bg-stone-900/10 hover:bg-stone-900/80 text-stone-500/20 hover:text-stone-200 shadow-none hover:shadow-md flex items-center justify-center transition-all duration-300 opacity-20 hover:opacity-100 border border-transparent hover:border-stone-700"
+        aria-label="Panel"
       >
-        <i className="fa-solid fa-gear text-xs"></i>
+        <i className="fa-solid fa-sliders text-[9px]"></i>
       </button>
 
       {/* Floating TikTok Action Button */}

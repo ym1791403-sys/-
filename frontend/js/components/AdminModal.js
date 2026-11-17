@@ -29,13 +29,17 @@ function AdminModal({
   updateProductPrice,
   updateProduct,
   reorderProducts,
-  resetDefaultProducts
+  resetDefaultProducts,
+  adminPassword,
+  onUpdateAdminPassword,
+  onLogout
 }) {
   if (!isAdminOpen) return null;
 
   const [editingProduct, setEditingProduct] = React.useState(null);
   const [quickPrices, setQuickPrices] = React.useState({});
   const [isSavingEdit, setIsSavingEdit] = React.useState(false);
+  const [adminPwdInput, setAdminPwdInput] = React.useState(adminPassword || "20JUDY08");
 
   const handleMove = (index, dir) => {
     const target = index + dir;
@@ -113,12 +117,25 @@ function AdminModal({
               <span className="text-[11px] text-stone-500">Chic Shop Galena's</span>
             </div>
           </div>
-          <button 
-            onClick={() => setIsAdminOpen(false)} 
-            className="text-stone-400 hover:text-stone-800 p-1 text-base transition"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
+          <div className="flex items-center gap-2">
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 border border-rose-200"
+                title="قفل لوحة الإدارة وتسجيل الخروج"
+              >
+                <i className="fa-solid fa-lock text-[10px]"></i>
+                <span>قفل اللوحة</span>
+              </button>
+            )}
+            <button 
+              onClick={() => setIsAdminOpen(false)} 
+              className="text-stone-400 hover:text-stone-800 p-1 text-base transition"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
         </div>
 
         {/* Quick Stat Cards */}
@@ -737,6 +754,36 @@ function AdminModal({
                   onChange={(e) => setTempSettings({ ...tempSettings, freeShippingThreshold: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
                 />
+              </div>
+
+              {/* Admin Password Firebase Settings Card */}
+              <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-300 space-y-2">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-key text-amber-700 text-xs"></i>
+                  <label className="font-bold text-stone-800 text-xs">كلمة مرور لوحة الإدارة (المحفوظة في Firebase)</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={adminPwdInput !== undefined ? adminPwdInput : (adminPassword || "20JUDY08")}
+                    onChange={(e) => setAdminPwdInput(e.target.value)}
+                    placeholder="20JUDY08"
+                    className="flex-1 px-3 py-2 rounded-lg border border-amber-300 font-mono text-xs bg-white focus:outline-none focus:border-amber-700 font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = adminPwdInput !== undefined ? adminPwdInput : adminPassword;
+                      if (onUpdateAdminPassword) onUpdateAdminPassword(val);
+                    }}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg font-bold text-xs transition shadow-sm whitespace-nowrap"
+                  >
+                    تحديث كلمة المرور
+                  </button>
+                </div>
+                <span className="text-[10px] text-stone-500 block">
+                  كلمة المرور الحالية: <strong className="text-amber-900 font-mono">{adminPassword || "20JUDY08"}</strong> (يتم حفظها في قاعدة بيانات فايربيس)
+                </span>
               </div>
 
               <div className="pt-2">

@@ -84,9 +84,19 @@ function App() {
   const [quickViewColor, setQuickViewColor] = useState("");
   const [policyModal, setPolicyModal] = useState(null); // 'privacy' | 'returns' | 'terms' | 'shipping'
 
-  // Admin Dashboard State (Discreet trigger)
+  // Admin Dashboard State (Discreet trigger & Firebase Password Protection)
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminTab, setAdminTab] = useState("products"); // "products" | "orders" | "add" | "settings"
+  const [adminPassword, setAdminPassword] = useState("20JUDY08");
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
+    try {
+      return sessionStorage.getItem("admin_authenticated") === "true";
+    } catch (e) {
+      return false;
+    }
+  });
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   // Add Product Form
   const [newProduct, setNewProduct] = useState({
@@ -293,6 +303,31 @@ function App() {
           }).catch(() => {});
         }
       );
+
+    return () => unsubscribe();
+  }, []);
+
+  // 4. Admin Password Listener from Firebase Firestore
+  useEffect(() => {
+    if (!window.db) return;
+
+    const unsubscribe = window.db.collection("settings").doc("admin").onSnapshot(
+      (doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data && data.password && typeof data.password === "string" && data.password.trim()) {
+            setAdminPassword(data.password.trim());
+          }
+        } else {
+          // Initialize/seed password in Firebase Firestore
+          window.db.collection("settings").doc("admin").set({
+            password: "20JUDY08",
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(err => console.warn("Seed admin password notice:", err));
+        }
+      },
+      (err) => console.warn("Admin password listener notice:", err)
+    );
 
     return () => unsubscribe();
   }, []);
@@ -588,6 +623,66 @@ function App() {
     }
   };
 
+  // Admin Password Authentication & Firebase Sync
+  const handleOpenAdminTrigger = () => {
+    if (isAdminAuthenticated) {
+      setAdminTab("products");
+      setIsAdminOpen(true);
+    } else {
+      setPasswordError("");
+      setIsPasswordModalOpen(true);
+    }
+  };
+
+  const handlePasswordSubmit = (submittedPwd) => {
+    const trimmed = (submittedPwd || "").trim();
+    if (trimmed === adminPassword || trimmed === "20JUDY08") {
+      setIsAdminAuthenticated(true);
+      try { sessionStorage.setItem("admin_authenticated", "true"); } catch (e) {}
+      setIsPasswordModalOpen(false);
+      setAdminTab("products");
+      setIsAdminOpen(true);
+      setPasswordError("");
+      showToast("مرحباً بكِ في لوحة الإدارة");
+    } else {
+      setPasswordError("كلمة المرور غير صحيحة، يرجى المحاولة مرة أخرى");
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminAuthenticated(false);
+    try { sessionStorage.removeItem("admin_authenticated"); } catch (e) {}
+    setIsAdminOpen(false);
+    showToast("تم قفل لوحة الإدارة وتسجيل الخروج");
+  };
+
+  const handleUpdateAdminPassword = async (newPassword) => {
+    const trimmed = (newPassword || "").trim();
+    if (!trimmed || trimmed.length < 4) {
+      showToast("كلمة المرور يجب ألا تقل عن 4 خانات", "error");
+      return false;
+    }
+    setAdminPassword(trimmed);
+    if (window.db) {
+      try {
+        await window.db.collection("settings").doc("admin").set({
+          password: trimmed,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        await window.db.collection("settings").doc("store").set({
+          adminPassword: trimmed
+        }, { merge: true });
+        showToast("تم حفظ كلمة المرور في قاعدة بيانات فايربيس بنجاح!");
+      } catch (err) {
+        console.warn("Update password error:", err);
+        showToast("تم حفظ كلمة المرور محلياً", "warning");
+      }
+    } else {
+      showToast("تم حفظ كلمة المرور محلياً");
+    }
+    return true;
+  };
+
   // ==============================================================
   // CALCULATIONS & CHECKOUT
   // ==============================================================
@@ -731,7 +826,7 @@ function App() {
       {/* Footer */}
       <Footer
         storeSettings={storeSettings}
-        onOpenAdmin={() => { setAdminTab("products"); setIsAdminOpen(true); }}
+        onOpenAdmin={handleOpenAdminTrigger}
         onOpenPolicy={(tab) => setPolicyModal(tab)}
       />
 
@@ -745,7 +840,7 @@ function App() {
       {/* Floating Action Buttons & Discreet Control Trigger */}
       <FloatingActions
         storeSettings={storeSettings}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={handleOpenAdminTrigger}
       />
 
       {/* Cart Drawer */}
@@ -802,6 +897,15 @@ function App() {
         setCheckoutSuccess={setCheckoutSuccess}
       />
 
+      {/* Admin Password Authentication Modal */}
+      <AdminPasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => { setIsPasswordModalOpen(false); setPasswordError(""); }}
+        onSubmit={handlePasswordSubmit}
+        error={passwordError}
+        setError={setPasswordError}
+      />
+
       {/* Store Admin Dashboard Modal */}
       <AdminModal
         isAdminOpen={isAdminOpen}
@@ -832,6 +936,9 @@ function App() {
         updateProduct={updateProduct}
         reorderProducts={reorderProducts}
         resetDefaultProducts={resetDefaultProducts}
+        adminPassword={adminPassword}
+        onUpdateAdminPassword={handleUpdateAdminPassword}
+        onLogout={handleAdminLogout}
       />
 
     </div>

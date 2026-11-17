@@ -61,7 +61,7 @@ function Footer({ storeSettings, onOpenAdmin, onOpenPolicy }) {
           </button>
         </div>
 
-        {/* Bottom Row: Copyright, Developer Credit & Admin */}
+        {/* Bottom Row: Copyright & Developer Credit */}
         <div className="pt-5 flex flex-col sm:flex-row items-center justify-between text-stone-400 text-[11px] gap-3 text-center sm:text-right">
           <span>جميع الحقوق محفوظة © {new Date().getFullYear()} Chic Shop Galena's</span>
 
@@ -78,13 +78,6 @@ function Footer({ storeSettings, onOpenAdmin, onOpenPolicy }) {
               JOO
             </a>
           </p>
-
-          <button 
-            onClick={onOpenAdmin}
-            className="hover:text-stone-200 underline transition"
-          >
-            إدارة المتجر
-          </button>
         </div>
       </div>
     </footer>
