@@ -34,16 +34,27 @@ function App() {
 
   // Products from Database / LocalStorage (Defaults to INITIAL_PRODUCTS)
   const [products, setProducts] = useState(() => {
+    const initial = window.INITIAL_PRODUCTS || [];
     const saved = localStorage.getItem("store_products");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map(p => p.id));
+          const missing = initial.filter(p => !existingIds.has(p.id));
+          if (missing.length > 0) {
+            const combined = [...parsed, ...missing];
+            try { localStorage.setItem("store_products", JSON.stringify(combined)); } catch (e) {}
+            return combined;
+          }
           return parsed;
         }
       } catch (e) {}
     }
-    return (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) ? window.INITIAL_PRODUCTS : [];
+    if (initial.length > 0) {
+      try { localStorage.setItem("store_products", JSON.stringify(initial)); } catch (e) {}
+    }
+    return initial;
   });
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
@@ -185,20 +196,25 @@ function App() {
           setProducts(fetched);
           localStorage.setItem("store_products", JSON.stringify(fetched));
         } else {
+          const initial = window.INITIAL_PRODUCTS || [];
           const saved = localStorage.getItem("store_products");
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                setProducts(parsed);
+                const existingIds = new Set(parsed.map(p => p.id));
+                const missing = initial.filter(p => !existingIds.has(p.id));
+                const finalProds = missing.length > 0 ? [...parsed, ...missing] : parsed;
+                setProducts(finalProds);
+                try { localStorage.setItem("store_products", JSON.stringify(finalProds)); } catch (e) {}
                 setIsLoadingProducts(false);
                 setDbStatus("connected");
                 return;
               }
             } catch (e) {}
           }
-          if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
-            setProducts(window.INITIAL_PRODUCTS);
+          if (initial.length > 0) {
+            setProducts(initial);
           }
         }
         setIsLoadingProducts(false);
@@ -206,19 +222,24 @@ function App() {
       },
       (error) => {
         console.warn("Products sync notice:", error);
+        const initial = window.INITIAL_PRODUCTS || [];
         const saved = localStorage.getItem("store_products");
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setProducts(parsed);
+              const existingIds = new Set(parsed.map(p => p.id));
+              const missing = initial.filter(p => !existingIds.has(p.id));
+              const finalProds = missing.length > 0 ? [...parsed, ...missing] : parsed;
+              setProducts(finalProds);
+              try { localStorage.setItem("store_products", JSON.stringify(finalProds)); } catch (e) {}
               setIsLoadingProducts(false);
               return;
             }
           } catch (e) {}
         }
-        if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
-          setProducts(window.INITIAL_PRODUCTS);
+        if (initial.length > 0) {
+          setProducts(initial);
         }
         setIsLoadingProducts(false);
         if (error.code === "permission-denied") {
