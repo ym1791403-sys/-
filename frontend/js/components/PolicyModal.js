@@ -216,10 +216,10 @@ function PolicyModal({ activeTab, onClose, onSelectTab }) {
                 <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
                   <h5 className="font-bold text-stone-900 mb-1">1. مواعيد التوصيل التقديرية</h5>
                   <ul className="list-disc list-inside mt-1 space-y-1 text-stone-600 text-xs">
-                    <li><strong>القاهرة والجيزة:</strong> خلال 24 - 48 ساعة كحد أقصى.</li>
-                    <li><strong>الإسكندرية ومحافظات الدلتا والقناة:</strong> خلال 2 - 3 أيام عمل.</li>
-                    <li><strong>محافظات الصعيد والوجه القبلي:</strong> خلال 3 - 4 أيام عمل.</li>
-                    <li><strong>المناطق الحدودية (شرم الشيخ، الغردقة، مطروح):</strong> خلال 3 - 5 أيام عمل.</li>
+                    <li><strong>القاهرة والجيزة:</strong> خلال 3 - 4 أيام عمل.</li>
+                    <li><strong>الإسكندرية ومحافظات الدلتا والقناة:</strong> خلال 4 - 5 أيام عمل.</li>
+                    <li><strong>محافظات الصعيد والوجه القبلي:</strong> خلال 4 - 6 أيام عمل.</li>
+                    <li><strong>المناطق الحدودية (شرم الشيخ، الغردقة، مطروح):</strong> خلال 5 - 7 أيام عمل.</li>
                   </ul>
                 </div>
 

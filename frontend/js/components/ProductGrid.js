@@ -91,7 +91,7 @@ function ProductGrid({
             </div>
             <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
               <strong className="block text-stone-900 mb-1">مدة التوصيل</strong>
-              <span>خلال 24-48 ساعة داخل القاهرة والجيزة، ومن يومين إلى 3 أيام لباقي محافظات الجمهورية.</span>
+              <span>خلال 3 إلى 4 أيام داخل القاهرة والجيزة، ومن 4 إلى 5 أيام لباقي محافظات الجمهورية.</span>
             </div>
           </div>
         </div>
