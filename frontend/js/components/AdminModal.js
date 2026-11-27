@@ -107,16 +107,11 @@ function AdminModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-5">
-      <div 
-        onClick={() => setIsAdminOpen(false)} 
-        className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm transition-opacity"
-      ></div>
-
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-5 sm:p-7 z-10 text-xs max-h-[92vh] flex flex-col animate-fade-in">
+    <div className="min-h-screen bg-[#FAF7F2] text-xs animate-fade-in">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-stone-200">
+        <div className="flex items-center justify-between pb-4 border-b border-stone-200 sticky top-0 bg-[#FAF7F2] z-10 pt-1">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center text-sm shadow">
               <i className="fa-solid fa-sliders"></i>
@@ -138,11 +133,14 @@ function AdminModal({
                 <span>قفل اللوحة</span>
               </button>
             )}
-            <button 
-              onClick={() => setIsAdminOpen(false)} 
-              className="text-stone-400 hover:text-stone-800 p-1 text-base transition"
+            <button
+              type="button"
+              onClick={() => setIsAdminOpen(false)}
+              className="text-[11px] font-bold text-stone-700 hover:text-stone-900 bg-white hover:bg-stone-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 border border-stone-300 shadow-sm"
+              title="العودة إلى المتجر"
             >
-              <i className="fa-solid fa-xmark"></i>
+              <i className="fa-solid fa-arrow-right text-[10px]"></i>
+              <span>عودة للمتجر</span>
             </button>
           </div>
         </div>
@@ -211,8 +209,8 @@ function AdminModal({
           </button>
         </div>
 
-        {/* TAB CONTENT (Scrollable) */}
-        <div className="flex-1 overflow-y-auto pr-1">
+        {/* TAB CONTENT */}
+        <div>
           
           {/* 1. PRODUCTS TAB */}
           {adminTab === "products" && (

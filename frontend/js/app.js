@@ -1085,6 +1085,75 @@ function App() {
     showToast("تم تأكيد طلبكِ بنجاح!");
   };
 
+  // Admin dashboard as a full page (not a modal overlay): when it is open,
+  // the storefront is replaced by the dashboard, with its own #admin address.
+  const adminPage = (
+    <AdminModal
+      isAdminOpen={isAdminOpen}
+      setIsAdminOpen={setIsAdminOpen}
+      adminTab={adminTab}
+      setAdminTab={setAdminTab}
+      products={products}
+      orders={orders}
+      pendingOrdersCount={pendingOrdersCount}
+      totalSalesRevenue={totalSalesRevenue}
+      deleteProduct={deleteProduct}
+      updateOrderStatus={updateOrderStatus}
+      newProduct={newProduct}
+      setNewProduct={setNewProduct}
+      handleAddProduct={handleAddProduct}
+      isSavingProduct={isSavingProduct}
+      isDragging={isDragging}
+      setIsDragging={setIsDragging}
+      fileInputRef={fileInputRef}
+      handleImageFile={handleImageFile}
+      categories={window.CATEGORIES || []}
+      dbStatus={dbStatus}
+      tempSettings={tempSettings}
+      setTempSettings={setTempSettings}
+      handleSaveSettings={handleSaveSettings}
+      isSavingSettings={isSavingSettings}
+      updateProductPrice={updateProductPrice}
+      updateProduct={updateProduct}
+      reorderProducts={reorderProducts}
+      resetDefaultProducts={resetDefaultProducts}
+      onUpdateAdminPassword={handleUpdateAdminPassword}
+      onLogout={handleAdminLogout}
+      coupons={coupons}
+      lowStockProducts={lowStockProducts}
+      onAddCoupon={addCoupon}
+      onDeleteCoupon={deleteCoupon}
+      onToggleCoupon={toggleCoupon}
+    />
+  );
+
+  // Keep the URL in sync: the admin dashboard is its own page (#admin).
+  useEffect(() => {
+    if (isAdminOpen) {
+      if (window.location.hash !== "#admin") {
+        window.history.replaceState(null, "", "#admin");
+      }
+    } else if (window.location.hash === "#admin") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, [isAdminOpen]);
+
+  // Deep link: opening the site with #admin jumps straight to admin login.
+  useEffect(() => {
+    if (window.location.hash === "#admin") {
+      handleOpenAdminTrigger();
+    }
+  }, []);
+
+  if (isAdminOpen) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] text-stone-800">
+        <Toast toast={toast} />
+        {adminPage}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-stone-800">
       
@@ -1252,45 +1321,6 @@ function App() {
         onSubmit={handleAdminLogin}
         error={passwordError}
         setError={setPasswordError}
-      />
-
-      {/* Store Admin Dashboard Modal */}
-      <AdminModal
-        isAdminOpen={isAdminOpen}
-        setIsAdminOpen={setIsAdminOpen}
-        adminTab={adminTab}
-        setAdminTab={setAdminTab}
-        products={products}
-        orders={orders}
-        pendingOrdersCount={pendingOrdersCount}
-        totalSalesRevenue={totalSalesRevenue}
-        deleteProduct={deleteProduct}
-        updateOrderStatus={updateOrderStatus}
-        newProduct={newProduct}
-        setNewProduct={setNewProduct}
-        handleAddProduct={handleAddProduct}
-        isSavingProduct={isSavingProduct}
-        isDragging={isDragging}
-        setIsDragging={setIsDragging}
-        fileInputRef={fileInputRef}
-        handleImageFile={handleImageFile}
-        categories={window.CATEGORIES || []}
-        dbStatus={dbStatus}
-        tempSettings={tempSettings}
-        setTempSettings={setTempSettings}
-        handleSaveSettings={handleSaveSettings}
-        isSavingSettings={isSavingSettings}
-        updateProductPrice={updateProductPrice}
-        updateProduct={updateProduct}
-        reorderProducts={reorderProducts}
-        resetDefaultProducts={resetDefaultProducts}
-        onUpdateAdminPassword={handleUpdateAdminPassword}
-        onLogout={handleAdminLogout}
-        coupons={coupons}
-        lowStockProducts={lowStockProducts}
-        onAddCoupon={addCoupon}
-        onDeleteCoupon={deleteCoupon}
-        onToggleCoupon={toggleCoupon}
       />
 
     </div>
