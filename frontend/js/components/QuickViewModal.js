@@ -24,7 +24,7 @@ function QuickViewModal({
   if (!quickViewProduct) return null;
 
   const displayImg = (quickViewProduct.images && quickViewProduct.images[0]) || 
-    "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop";
+    "images/products/product-1.jpg";
 
   const renderStars = (value) => {
     const full = Math.round(Number(value) || 0);
