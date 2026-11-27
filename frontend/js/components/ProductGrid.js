@@ -6,6 +6,7 @@ function ProductGrid({
   filteredProducts,
   isLoadingProducts,
   categories,
+  ratingsByProduct,
   selectedCategory,
   onSelectCategory,
   onResetFilters,
@@ -68,6 +69,7 @@ function ProductGrid({
                 <ProductCard
                   key={product.id}
                   product={product}
+                  rating={ratingsByProduct ? ratingsByProduct[product.id] : undefined}
                   isFavorite={wishlist.includes(product.id)}
                   onToggleWishlist={onToggleWishlist}
                   onQuickView={onQuickView}

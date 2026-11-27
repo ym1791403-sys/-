@@ -32,14 +32,20 @@ function AdminModal({
   resetDefaultProducts,
   adminPassword,
   onUpdateAdminPassword,
-  onLogout
+  onLogout,
+  coupons,
+  lowStockProducts,
+  onAddCoupon,
+  onDeleteCoupon,
+  onToggleCoupon
 }) {
   if (!isAdminOpen) return null;
 
   const [editingProduct, setEditingProduct] = React.useState(null);
   const [quickPrices, setQuickPrices] = React.useState({});
   const [isSavingEdit, setIsSavingEdit] = React.useState(false);
-  const [adminPwdInput, setAdminPwdInput] = React.useState(adminPassword || "20JUDY08");
+  const [adminPwdInput, setAdminPwdInput] = React.useState(adminPassword || "");
+  const [newCoupon, setNewCoupon] = React.useState({ code: "", type: "percent", value: "", minSubtotal: "" });
 
   const handleMove = (index, dir) => {
     const target = index + dir;
@@ -61,6 +67,7 @@ function AdminModal({
       description: p.description || "",
       material: p.material || "",
       images: p.images || [],
+      stock: (typeof p.stock === "number" ? p.stock : 10),
       inStock: p.inStock !== false
     });
   };
@@ -87,6 +94,9 @@ function AdminModal({
       description: editingProduct.description ? editingProduct.description.trim() : "",
       material: editingProduct.material ? editingProduct.material.trim() : "",
       images: editingProduct.images && editingProduct.images.length > 0 ? editingProduct.images : [],
+      stock: (editingProduct.stock === "" || editingProduct.stock === undefined || editingProduct.stock === null)
+        ? 10
+        : Math.max(0, parseInt(editingProduct.stock, 10) || 0),
       inStock: editingProduct.inStock
     };
 
@@ -192,6 +202,14 @@ function AdminModal({
           >
             إعدادات المتجر
           </button>
+          <button
+            onClick={() => setAdminTab("coupons")}
+            className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
+              adminTab === "coupons" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:bg-stone-100"
+            }`}
+          >
+            كوبونات الخصم ({coupons ? coupons.length : 0})
+          </button>
         </div>
 
         {/* TAB CONTENT (Scrollable) */}
@@ -227,6 +245,19 @@ function AdminModal({
                   </button>
                 </div>
               </div>
+
+              {/* Low Stock Alert */}
+              {lowStockProducts && lowStockProducts.length > 0 && (
+                <div className="bg-rose-50 border border-rose-300 p-3 rounded-xl text-rose-900 text-xs space-y-1">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <i className="fa-solid fa-triangle-exclamation"></i>
+                    تنبيه: منتجات قاربت على النفاد
+                  </p>
+                  {lowStockProducts.map(p => (
+                    <p key={p.id}>• {p.name} — باقي {p.stock} فقط</p>
+                  ))}
+                </div>
+              )}
 
               {/* Full Edit Form Modal Box */}
               {editingProduct && (
@@ -304,6 +335,18 @@ function AdminModal({
                           className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 focus:outline-none focus:border-amber-600 bg-white"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-stone-700 mb-1">الكمية المتاحة في المخزون</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingProduct.stock === undefined || editingProduct.stock === null ? "" : editingProduct.stock}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                        placeholder="مثال: 10"
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 focus:outline-none focus:border-amber-600 bg-white"
+                      />
                     </div>
 
                     <div>
@@ -625,6 +668,18 @@ function AdminModal({
               </div>
 
               <div>
+                <label className="block font-bold text-stone-700 mb-1">الكمية المتاحة في المخزون</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={newProduct.stock === undefined || newProduct.stock === null ? "" : newProduct.stock}
+                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                  placeholder="10"
+                  className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
+                />
+              </div>
+
+              <div>
                 <label className="block font-bold text-stone-700 mb-1">صورة المنتج</label>
                 {newProduct.imageData ? (
                   <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-stone-300 shadow-sm mx-auto group">
@@ -765,9 +820,9 @@ function AdminModal({
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={adminPwdInput !== undefined ? adminPwdInput : (adminPassword || "20JUDY08")}
+                    value={adminPwdInput !== undefined ? adminPwdInput : (adminPassword || "")}
                     onChange={(e) => setAdminPwdInput(e.target.value)}
-                    placeholder="20JUDY08"
+                    placeholder="كلمة مرور جديدة (6 خانات على الأقل)"
                     className="flex-1 px-3 py-2 rounded-lg border border-amber-300 font-mono text-xs bg-white focus:outline-none focus:border-amber-700 font-bold"
                   />
                   <button
@@ -782,7 +837,7 @@ function AdminModal({
                   </button>
                 </div>
                 <span className="text-[10px] text-stone-500 block">
-                  كلمة المرور الحالية: <strong className="text-amber-900 font-mono">{adminPassword || "20JUDY08"}</strong> (يتم حفظها في قاعدة بيانات فايربيس)
+                  كلمة المرور محفوظة في Firebase فقط ولا تظهر هنا. اكتبي كلمة جديدة واضغطي "تحديث كلمة المرور" لتغييرها.
                 </span>
               </div>
 
@@ -795,6 +850,114 @@ function AdminModal({
                   {isSavingSettings ? "جارٍ الحفظ..." : "حفظ التعديلات"}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* 5. COUPONS TAB */}
+          {adminTab === "coupons" && (
+            <div className="space-y-3.5">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (onAddCoupon) {
+                    onAddCoupon(newCoupon).then(ok => {
+                      if (ok) setNewCoupon({ code: "", type: "percent", value: "", minSubtotal: "" });
+                    });
+                  }
+                }}
+                className="bg-stone-50 border border-stone-200 rounded-xl p-3.5 space-y-2.5"
+              >
+                <p className="font-bold text-stone-800">إضافة كوبون خصم جديد</p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1">الكود *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newCoupon.code}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                      placeholder="مثال: GALENA10"
+                      className="w-full px-3 py-2 rounded-lg border border-stone-300 font-mono focus:outline-none focus:border-stone-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1">نوع الخصم</label>
+                    <select
+                      value={newCoupon.type}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, type: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:border-stone-800"
+                    >
+                      <option value="percent">نسبة مئوية %</option>
+                      <option value="fixed">مبلغ ثابت (ج.م)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1">قيمة الخصم *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={newCoupon.value}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, value: e.target.value })}
+                      placeholder={newCoupon.type === "fixed" ? "50" : "10"}
+                      className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1">حد أدنى للطلب (ج.م)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newCoupon.minSubtotal}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, minSubtotal: e.target.value })}
+                      placeholder="0 = بدون حد أدنى"
+                      className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold py-2 rounded-lg transition">
+                  إضافة الكوبون
+                </button>
+              </form>
+
+              {(!coupons || coupons.length === 0) ? (
+                <p className="text-center text-stone-500 py-6">لا توجد كوبونات بعد</p>
+              ) : (
+                <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden bg-white">
+                  {coupons.map(c => (
+                    <div key={c.id} className="p-3 flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <span className="font-mono font-bold text-stone-900">{c.code}</span>
+                        <span className="text-stone-500 text-[11px] block">
+                          {c.type === "fixed" ? `خصم ${c.value} ج.م` : `خصم ${c.value}%`}
+                          {c.minSubtotal > 0 ? ` — حد أدنى ${c.minSubtotal} ج.م` : ""}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onToggleCoupon && onToggleCoupon(c.id, c.active === false)}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
+                            c.active === false ? "bg-stone-200 text-stone-600" : "bg-emerald-100 text-emerald-800"
+                          }`}
+                        >
+                          {c.active === false ? "غير مفعّل" : "مفعّل"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteCoupon && onDeleteCoupon(c.id)}
+                          className="text-rose-600 hover:text-rose-800 p-1"
+                          title="حذف الكوبون"
+                        >
+                          <i className="fa-regular fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

@@ -3,6 +3,7 @@
 
 function ProductCard({
   product,
+  rating,
   isFavorite,
   onToggleWishlist,
   onQuickView,
@@ -37,6 +38,13 @@ function ProductCard({
           >
             <i className={`fa-${isFavorite ? 'solid' : 'regular'} fa-heart text-xs`}></i>
           </button>
+          {typeof product.stock === "number" && product.stock <= 3 && (
+            <span className={`absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-full shadow ${
+              product.stock === 0 ? "bg-rose-600 text-white" : "bg-amber-400 text-stone-900"
+            }`}>
+              {product.stock === 0 ? "نفدت الكمية" : `باقي ${product.stock} فقط`}
+            </span>
+          )}
         </div>
 
         {/* Info */}
@@ -48,6 +56,17 @@ function ProductCard({
           >
             {product.name}
           </h4>
+
+          {rating && rating.count > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-amber-500 text-[11px]">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <i key={n} className={`fa-${n <= Math.round(rating.average) ? "solid" : "regular"} fa-star`}></i>
+                ))}
+              </span>
+              <span className="text-[10px] text-stone-500">({rating.count})</span>
+            </div>
+          )}
 
           {product.colors && product.colors.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5 flex-wrap">
@@ -76,10 +95,13 @@ function ProductCard({
 
         <button
           onClick={() => onAddToCart(product)}
-          className="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+          disabled={product.stock === 0}
+          className={`w-full text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 ${
+            product.stock === 0 ? "bg-stone-300 cursor-not-allowed" : "bg-stone-900 hover:bg-stone-800"
+          }`}
         >
           <i className="fa-solid fa-cart-plus text-[11px]"></i>
-          <span>إضافة للسلة</span>
+          <span>{product.stock === 0 ? "نفدت الكمية" : "إضافة للسلة"}</span>
         </button>
       </div>
 

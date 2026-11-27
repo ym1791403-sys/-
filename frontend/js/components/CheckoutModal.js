@@ -10,6 +10,13 @@ function CheckoutModal({
   selectedShipping,
   shippingCost,
   grandTotal,
+  promoInput,
+  setPromoInput,
+  appliedCoupon,
+  promoError,
+  promoDiscount,
+  onApplyPromo,
+  onRemovePromo,
   isSubmittingOrder,
   handleCheckoutSubmit
 }) {
@@ -97,11 +104,45 @@ function CheckoutModal({
             ></textarea>
           </div>
 
+          <div>
+            <label className="block font-bold text-stone-700 mb-1">كود خصم (اختياري)</label>
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-300 rounded-lg px-3 py-2">
+                <span className="font-bold text-emerald-800">تم تطبيق {appliedCoupon.code} — خصم {promoDiscount} ج.م</span>
+                <button type="button" onClick={onRemovePromo} className="text-rose-600 font-bold">إزالة</button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput || ""}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  placeholder="مثال: GALENA10"
+                  className="flex-1 px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={onApplyPromo}
+                  className="bg-stone-900 hover:bg-stone-800 text-white px-3 py-2 rounded-lg font-bold"
+                >
+                  تطبيق
+                </button>
+              </div>
+            )}
+            {promoError && <span className="text-[10px] text-rose-600 block mt-1">{promoError}</span>}
+          </div>
+
           <div className="bg-stone-50 p-2.5 rounded-lg border border-stone-200">
             <div className="flex justify-between text-stone-600 mb-1">
               <span>الشحن ({selectedShipping.city}):</span>
               <span>{shippingCost === 0 ? 'مجاناً' : `${shippingCost} ج.م`}</span>
             </div>
+            {promoDiscount > 0 && (
+              <div className="flex justify-between text-emerald-700 mb-1">
+                <span>خصم الكود ({appliedCoupon.code}):</span>
+                <span>-{promoDiscount} ج.م</span>
+              </div>
+            )}
             <div className="flex justify-between text-stone-900 font-bold text-sm">
               <span>المبلغ للدفع عند الاستلام:</span>
               <span>{grandTotal} ج.م</span>

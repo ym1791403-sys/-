@@ -11,6 +11,7 @@ function CartDrawer({
   includeGiftWrap,
   setIncludeGiftWrap,
   subtotal,
+  promoDiscount,
   grandTotal,
   onProceedCheckout
 }) {
@@ -108,6 +109,12 @@ function CartDrawer({
                   <span>المجموع:</span>
                   <span className="font-bold">{subtotal} ج.م</span>
                 </div>
+                {promoDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>خصم الكود:</span>
+                    <span>-{promoDiscount} ج.م</span>
+                  </div>
+                )}
                 {includeGiftWrap && (
                   <div className="flex justify-between text-rose-700">
                     <span>تغليف الهدية:</span>
