@@ -17,9 +17,8 @@ function Header({
     <>
       {/* Top Announcement Bar */}
       <div className="bg-stone-900 text-stone-200 text-xs py-2 px-4 text-center font-medium">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl flex items-center justify-center sm:justify-between">
-          <span className="hidden sm:inline">أهلاً بكِ في Chic Shop Galena's للإكسسوارات النسائية</span>
-          <span>شحن مجاني لكافة المحافظات للطلبات الأكثر من {storeSettings.freeShippingThreshold} جنيه</span>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl flex items-center justify-center">
+          <span>أهلاً بكِ في Chic Shop Galena's للإكسسوارات النسائية</span>
         </div>
       </div>
 

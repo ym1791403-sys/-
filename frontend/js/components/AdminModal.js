@@ -796,16 +796,6 @@ function AdminModal({
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">الحد الأدنى للشحن المجاني (ج.م)</label>
-                <input
-                  type="number"
-                  value={tempSettings.freeShippingThreshold}
-                  onChange={(e) => setTempSettings({ ...tempSettings, freeShippingThreshold: Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
-                />
-              </div>
-
               <div className="pt-2">
                 <button
                   onClick={handleSaveSettings}

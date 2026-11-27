@@ -128,9 +128,6 @@ function AdminPasswordModal({
             <i className="fa-solid fa-shield-halved text-emerald-600"></i>
             <span>دخول آمن</span>
           </span>
-          <p className="text-[10px] text-stone-400 mt-1">
-            حساب الأدمن: admin@chicshopgalena.com
-          </p>
         </div>
 
       </div>
