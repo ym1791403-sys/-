@@ -34,8 +34,14 @@ try {
   console.error("Firebase init notice:", err);
 }
 
+// Admin login uses a single fixed email (not a secret — the password is
+// the secret). The login form asks for the password only; the owner
+// creates the matching Auth user in the Firebase console.
+const ADMIN_EMAIL = "admin@chicshopgalena.com";
+
 // Attach to window for global access across components
 window.firebaseConfig = firebaseConfig;
+window.ADMIN_EMAIL = ADMIN_EMAIL;
 window.db = db;
 window.auth = auth;
 window.analytics = analytics;
