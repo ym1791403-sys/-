@@ -30,7 +30,6 @@ function AdminModal({
   updateProduct,
   reorderProducts,
   resetDefaultProducts,
-  adminPassword,
   onUpdateAdminPassword,
   onLogout,
   coupons,
@@ -44,7 +43,7 @@ function AdminModal({
   const [editingProduct, setEditingProduct] = React.useState(null);
   const [quickPrices, setQuickPrices] = React.useState({});
   const [isSavingEdit, setIsSavingEdit] = React.useState(false);
-  const [adminPwdInput, setAdminPwdInput] = React.useState(adminPassword || "");
+  const [adminPwdInput, setAdminPwdInput] = React.useState("");
   const [newCoupon, setNewCoupon] = React.useState({ code: "", type: "percent", value: "", minSubtotal: "" });
 
   const handleMove = (index, dir) => {
@@ -811,25 +810,27 @@ function AdminModal({
                 />
               </div>
 
-              {/* Admin Password Firebase Settings Card */}
+              {/* Admin Password (Firebase Authentication) */}
               <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-300 space-y-2">
                 <div className="flex items-center gap-2">
                   <i className="fa-solid fa-key text-amber-700 text-xs"></i>
-                  <label className="font-bold text-stone-800 text-xs">كلمة مرور لوحة الإدارة (المحفوظة في Firebase)</label>
+                  <label className="font-bold text-stone-800 text-xs">تغيير كلمة مرور حساب الأدمن</label>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
-                    type="text"
-                    value={adminPwdInput !== undefined ? adminPwdInput : (adminPassword || "")}
+                    type="password"
+                    value={adminPwdInput}
                     onChange={(e) => setAdminPwdInput(e.target.value)}
                     placeholder="كلمة مرور جديدة (6 خانات على الأقل)"
                     className="flex-1 px-3 py-2 rounded-lg border border-amber-300 font-mono text-xs bg-white focus:outline-none focus:border-amber-700 font-bold"
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      const val = adminPwdInput !== undefined ? adminPwdInput : adminPassword;
-                      if (onUpdateAdminPassword) onUpdateAdminPassword(val);
+                    onClick={async () => {
+                      if (onUpdateAdminPassword) {
+                        const ok = await onUpdateAdminPassword(adminPwdInput);
+                        if (ok) setAdminPwdInput("");
+                      }
                     }}
                     className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg font-bold text-xs transition shadow-sm whitespace-nowrap"
                   >
@@ -837,7 +838,7 @@ function AdminModal({
                   </button>
                 </div>
                 <span className="text-[10px] text-stone-500 block">
-                  كلمة المرور محفوظة في Firebase فقط ولا تظهر هنا. اكتبي كلمة جديدة واضغطي "تحديث كلمة المرور" لتغييرها.
+                  كلمة المرور بتتغير في حساب Firebase Authentication نفسه، ومش بتتخزن في قاعدة البيانات.
                 </span>
               </div>
 
