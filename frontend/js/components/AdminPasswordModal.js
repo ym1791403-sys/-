@@ -10,7 +10,6 @@ function AdminPasswordModal({
 }) {
   if (!isOpen) return null;
 
-  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -18,7 +17,6 @@ function AdminPasswordModal({
 
   React.useEffect(() => {
     if (isOpen) {
-      setEmail("");
       setPassword("");
       if (setError) setError("");
       setTimeout(() => {
@@ -29,17 +27,13 @@ function AdminPasswordModal({
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!email.trim()) {
-      if (setError) setError("اكتبي إيميل حساب الأدمن");
-      return;
-    }
     if (!password) {
-      if (setError) setError("يرجى إدخال كلمة المرور");
+      if (setError) setError("اكتب كلمة المرور");
       return;
     }
     setIsSubmitting(true);
     try {
-      await onSubmit(email, password);
+      await onSubmit(password);
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +65,7 @@ function AdminPasswordModal({
           </div>
           <h3 className="text-base font-bold text-stone-900">دخول لوحة الإدارة</h3>
           <p className="text-[11px] text-stone-500 mt-1">
-            سجّلي الدخول بحساب الأدمن (الإيميل وكلمة المرور من Firebase Authentication)
+            اكتب كلمة مرور الأدمن للدخول إلى لوحة التحكم
           </p>
         </div>
 
@@ -79,35 +73,18 @@ function AdminPasswordModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold text-stone-700 mb-1.5">
-              إيميل الأدمن
-            </label>
-            <input
-              ref={inputRef}
-              type="email"
-              dir="ltr"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (error && setError) setError("");
-              }}
-              placeholder="admin@example.com"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 text-xs bg-stone-50 font-medium text-right"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-stone-700 mb-1.5">
               كلمة المرور
             </label>
             <div className="relative">
               <input
+                ref={inputRef}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (error && setError) setError("");
                 }}
-                placeholder="أدخلي كلمة المرور هنا..."
+                placeholder="اكتب كلمة المرور هنا..."
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 text-xs bg-stone-50 font-medium pl-10"
               />
               <button
@@ -152,7 +129,7 @@ function AdminPasswordModal({
             <span>دخول آمن عبر Firebase Authentication</span>
           </span>
           <p className="text-[10px] text-stone-400 mt-1">
-            لو لسه معملتيش حساب الأدمن، أنشئيه من Firebase Console ← Authentication ← Add user
+            حساب الأدمن بيتعمل من Firebase Console ← Authentication ← Add user بالإيميل admin@chicshopgalena.com
           </p>
         </div>
 

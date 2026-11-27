@@ -728,34 +728,30 @@ function App() {
     }
   };
 
-  // Admin login through Firebase Authentication (email + password account
-  // created by the owner in the Firebase console). No password is checked
-  // against Firestore anymore.
-  const handleAdminLogin = async (email, password) => {
-    const mail = (email || "").trim();
+  // Admin login through Firebase Authentication. The form asks for the
+  // password only; the email is a fixed admin address (not a secret).
+  const handleAdminLogin = async (password) => {
     const pwd = (password || "").trim();
-    if (!mail || !pwd) {
-      setPasswordError("اكتبي الإيميل وكلمة المرور");
+    if (!pwd) {
+      setPasswordError("اكتب كلمة المرور");
       return;
     }
     if (!window.auth) {
-      setPasswordError("خدمة الدخول غير متاحة حالياً، حاولي بعد قليل");
+      setPasswordError("خدمة الدخول غير متاحة حالياً، حاول بعد قليل");
       return;
     }
     try {
-      await window.auth.signInWithEmailAndPassword(mail, pwd);
+      await window.auth.signInWithEmailAndPassword(window.ADMIN_EMAIL, pwd);
       setIsPasswordModalOpen(false);
       setAdminTab("products");
       setIsAdminOpen(true);
       setPasswordError("");
-      showToast("مرحباً بكِ في لوحة الإدارة");
+      showToast("مرحباً بك في لوحة الإدارة");
     } catch (err) {
       if (err && err.code === "auth/too-many-requests") {
-        setPasswordError("محاولات كثيرة — انتظري دقيقة وحاولي تاني");
-      } else if (err && (err.code === "auth/user-not-found" || err.code === "auth/operation-not-allowed")) {
-        setPasswordError("مفيش حساب أدمن بالإيميل ده — أنشئيه من Firebase Console");
+        setPasswordError("محاولات كثيرة — انتظر دقيقة وحاول تاني");
       } else {
-        setPasswordError("بيانات الدخول غير صحيحة، تأكدي وحاولي تاني");
+        setPasswordError("كلمة المرور غير صحيحة، أو حساب الأدمن لسه متعملش — تأكد من Firebase Console");
       }
     }
   };
@@ -778,7 +774,7 @@ function App() {
     }
     const user = (window.auth && window.auth.currentUser) || adminUser;
     if (!user) {
-      showToast("سجّلي الدخول أولاً", "error");
+      showToast("سجّل الدخول أولاً", "error");
       return false;
     }
     try {
@@ -787,7 +783,7 @@ function App() {
       return true;
     } catch (err) {
       if (err && err.code === "auth/requires-recent-login") {
-        showToast("لأمانك سجّلي الدخول من جديد ثم غيّري كلمة المرور", "error");
+        showToast("لأمانك سجّل الدخول من جديد ثم غيّر كلمة المرور", "error");
       } else {
         console.warn("Update password error:", err);
         showToast("تعذر تغيير كلمة المرور", "error");
