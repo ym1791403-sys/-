@@ -1,9 +1,8 @@
-// Admin Password Authentication Modal Component
+// Admin Login Modal Component (Firebase Authentication)
 // Chic Shop Galena's - Protected Control Panel
 
 function AdminPasswordModal({
   isOpen,
-  isSetup,
   onClose,
   onSubmit,
   error,
@@ -11,6 +10,7 @@ function AdminPasswordModal({
 }) {
   if (!isOpen) return null;
 
+  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -18,6 +18,7 @@ function AdminPasswordModal({
 
   React.useEffect(() => {
     if (isOpen) {
+      setEmail("");
       setPassword("");
       if (setError) setError("");
       setTimeout(() => {
@@ -26,15 +27,22 @@ function AdminPasswordModal({
     }
   }, [isOpen]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (!email.trim()) {
+      if (setError) setError("اكتبي إيميل حساب الأدمن");
+      return;
+    }
     if (!password) {
       if (setError) setError("يرجى إدخال كلمة المرور");
       return;
     }
     setIsSubmitting(true);
-    onSubmit(password);
-    setIsSubmitting(false);
+    try {
+      await onSubmit(email, password);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -61,11 +69,9 @@ function AdminPasswordModal({
           <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center text-lg mx-auto mb-3 shadow-inner">
             <i className="fa-solid fa-lock"></i>
           </div>
-          <h3 className="text-base font-bold text-stone-900">{isSetup ? "إنشاء كلمة مرور الأدمن" : "لوحة الإدارة المحمية"}</h3>
+          <h3 className="text-base font-bold text-stone-900">دخول لوحة الإدارة</h3>
           <p className="text-[11px] text-stone-500 mt-1">
-            {isSetup
-              ? "لم يتم تعيين كلمة مرور بعد — اختاري كلمة مرور قوية (6 خانات على الأقل) وسيتم حفظها في Firebase فقط"
-              : "يرجى إدخال كلمة المرور للوصول إلى لوحة التحكم"}
+            سجّلي الدخول بحساب الأدمن (الإيميل وكلمة المرور من Firebase Authentication)
           </p>
         </div>
 
@@ -73,11 +79,28 @@ function AdminPasswordModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold text-stone-700 mb-1.5">
+              إيميل الأدمن
+            </label>
+            <input
+              ref={inputRef}
+              type="email"
+              dir="ltr"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error && setError) setError("");
+              }}
+              placeholder="admin@example.com"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 text-xs bg-stone-50 font-medium text-right"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-stone-700 mb-1.5">
               كلمة المرور
             </label>
             <div className="relative">
               <input
-                ref={inputRef}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => {
@@ -111,7 +134,7 @@ function AdminPasswordModal({
               className="flex-1 bg-stone-900 hover:bg-stone-800 text-white py-2.5 px-4 rounded-xl font-bold text-xs transition shadow flex items-center justify-center gap-1.5"
             >
               <i className="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-              <span>{isSetup ? "حفظ كلمة المرور" : "دخول"}</span>
+              <span>{isSubmitting ? "جارٍ التحقق..." : "دخول"}</span>
             </button>
             <button
               type="button"
@@ -126,8 +149,11 @@ function AdminPasswordModal({
         <div className="mt-4 pt-3 border-t border-stone-100 text-center">
           <span className="text-[10px] text-stone-400 flex items-center justify-center gap-1">
             <i className="fa-solid fa-shield-halved text-emerald-600"></i>
-            <span>محمي بقاعدة بيانات Firebase</span>
+            <span>دخول آمن عبر Firebase Authentication</span>
           </span>
+          <p className="text-[10px] text-stone-400 mt-1">
+            لو لسه معملتيش حساب الأدمن، أنشئيه من Firebase Console ← Authentication ← Add user
+          </p>
         </div>
 
       </div>

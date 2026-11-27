@@ -12,6 +12,7 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
 let analytics = null;
 let isFirebaseAvailable = false;
 
@@ -21,6 +22,9 @@ try {
       firebase.initializeApp(firebaseConfig);
     }
     db = firebase.firestore();
+    try {
+      auth = firebase.auth();
+    } catch (e) {}
     isFirebaseAvailable = true;
     try {
       analytics = firebase.analytics();
@@ -33,5 +37,6 @@ try {
 // Attach to window for global access across components
 window.firebaseConfig = firebaseConfig;
 window.db = db;
+window.auth = auth;
 window.analytics = analytics;
 window.isFirebaseAvailable = isFirebaseAvailable;

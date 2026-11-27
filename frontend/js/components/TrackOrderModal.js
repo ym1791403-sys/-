@@ -11,15 +11,20 @@ function TrackOrderModal({ isOpen, onClose, orders }) {
   const normalizePhone = (v) =>
     (v || "").replace(/[^0-9]/g, "").replace(/^002/, "").replace(/^2(?=01)/, "");
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     const q = (query || "").trim();
     if (!q) return;
     const qPhone = normalizePhone(q);
-    const found = (orders || []).find(o =>
-      (o.orderNumber && o.orderNumber.toUpperCase() === q.toUpperCase()) ||
-      (o.customer && o.customer.phone && qPhone.length >= 9 && normalizePhone(o.customer.phone) === qPhone)
+    // Orders here are the public order_tracking docs (no customer data):
+    // match by order number, or by the SHA-256 hash of the phone number.
+    let found = (orders || []).find(o =>
+      o.orderNumber && o.orderNumber.toUpperCase() === q.toUpperCase()
     );
+    if (!found && qPhone.length >= 9 && window.hashPhoneNumber) {
+      const h = await window.hashPhoneNumber(qPhone);
+      found = (orders || []).find(o => o.phoneHash && o.phoneHash === h);
+    }
     setResult(found || null);
     setSearched(true);
   };

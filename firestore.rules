@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// Chic Shop Galena's — Firestore security rules.
+// Principle: the storefront works for everyone, but only a signed-in
+// Firebase Auth admin can write store data or read full orders (which
+// contain customer names, phones and addresses).
+//
+// SETUP (Firebase console, project galgol):
+//   1. Authentication -> Sign-in method -> enable Email/Password.
+//   2. Authentication -> Users -> Add user (the admin email + password).
+//   3. Firestore Database -> Rules -> paste this file -> Publish.
+//
+// The app signs the admin in with that account; customers never sign in.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Products & coupons: public read, admin-only write.
+    // Public checkout may only DECREASE stock (never raise it or set it
+    // freely) so the stock decrement at order time keeps working.
+    match /products/{id} {
+      allow read: if true;
+      allow create, delete: if request.auth != null;
+      allow update: if request.auth != null
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+            && request.resource.data.stock is int
+            && request.resource.data.stock < resource.data.stock
+            && request.resource.data.stock >= 0);
+    }
+    match /coupons/{id} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Store settings (TikTok link, delivery options...): public read,
+    // admin-only write.
+    match /settings/{doc} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Reviews: anyone can read and post (validated); only admin edits/deletes.
+    match /reviews/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 1000
+        && request.resource.data.productId is string;
+      allow update, delete: if request.auth != null;
+    }
+
+    // Orders: anyone can place an order (validated fields only);
+    // only the signed-in admin can read, update or delete them.
+    match /orders/{id} {
+      allow create: if request.resource.data.customer is map
+        && request.resource.data.customer.name is string
+        && request.resource.data.customer.name.size() > 0
+        && request.resource.data.customer.phone is string
+        && request.resource.data.items is list
+        && request.resource.data.items.size() >= 1
+        && request.resource.data.items.size() <= 50;
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // Public order tracking: these docs carry NO customer data
+    // (no names, phones or addresses — the phone is only a SHA-256 hash),
+    // so anyone may read them. Only the admin may change their status.
+    match /order_tracking/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.orderNumber is string
+        && request.resource.data.phoneHash is string
+        && request.resource.data.status is string;
+      allow update, delete: if request.auth != null;
+    }
+  }
+}

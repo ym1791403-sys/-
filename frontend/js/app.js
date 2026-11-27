@@ -3,6 +3,24 @@
 
 const { useState, useEffect, useMemo, useRef } = React;
 
+// SHA-256 hash of a normalized phone number, used as the lookup key for
+// public order tracking — the phone itself is never stored in the
+// tracking document.
+async function hashPhoneNumber(phone) {
+  const digits = (phone || "").replace(/[^0-9]/g, "").replace(/^002/, "").replace(/^2(?=01)/, "");
+  try {
+    if (typeof crypto !== "undefined" && crypto.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(digits));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+  } catch (e) {}
+  // Fallback for very old browsers without crypto.subtle (lookup key only).
+  let h = 5381;
+  for (let i = 0; i < digits.length; i++) h = ((h << 5) + h + digits.charCodeAt(i)) >>> 0;
+  return "djb2-" + h.toString(16);
+}
+window.hashPhoneNumber = hashPhoneNumber;
+
 function App() {
   const storeDefaults = window.DEFAULT_STORE_SETTINGS || {
     storeName: "Chic Shop Galena's",
@@ -84,23 +102,40 @@ function App() {
   const [quickViewColor, setQuickViewColor] = useState("");
   const [policyModal, setPolicyModal] = useState(null); // 'privacy' | 'returns' | 'terms' | 'shipping'
 
-  // Admin Dashboard State (Footer brand trigger & Firebase Password Protection)
+  // Admin Dashboard State (Footer brand trigger & Firebase Auth)
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminTab, setAdminTab] = useState("products"); // "products" | "orders" | "add" | "settings" | "coupons"
-  // Security: the admin password is NEVER written in this code. It lives
-  // only in Firestore (settings/admin). It starts empty until the
-  // Firestore listener loads it, or the owner creates one on first run.
-  const [adminPassword, setAdminPassword] = useState("");
-  const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
-    try {
-      return sessionStorage.getItem("admin_authenticated") === "true";
-    } catch (e) {
-      return false;
-    }
-  });
+  // Security: admin login runs on Firebase Authentication (email +
+  // password account created in the Firebase console). No admin password
+  // lives in the code or in Firestore anymore.
+  const [adminUser, setAdminUser] = useState(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+
+  // Firebase Auth session listener (local persistence: stays signed in
+  // across reloads). On first sign-in it also deletes the legacy
+  // Firestore admin password, which is no longer used.
+  useEffect(() => {
+    if (!window.auth) return;
+    const unsubscribe = window.auth.onAuthStateChanged((user) => {
+      setAdminUser(user || null);
+      setIsAdminAuthenticated(!!user);
+      if (user && window.db) {
+        try {
+          if (!sessionStorage.getItem("admin_legacy_cleaned")) {
+            sessionStorage.setItem("admin_legacy_cleaned", "true");
+            const FieldValue = (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue : null;
+            if (FieldValue) {
+              window.db.collection("settings").doc("admin").update({ password: FieldValue.delete() }).catch(() => {});
+              window.db.collection("settings").doc("store").update({ adminPassword: FieldValue.delete() }).catch(() => {});
+            }
+          }
+        } catch (e) {}
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Add Product Form
   const [newProduct, setNewProduct] = useState({
@@ -295,9 +330,13 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // 3. Orders Listener
+  // 3. Orders Listener (admin only — full orders contain customer data,
+  // so Firestore rules allow reading them only for a signed-in admin)
   useEffect(() => {
-    if (!window.db) return;
+    if (!window.db || !isAdminAuthenticated) {
+      setOrders([]);
+      return;
+    }
 
     const unsubscribe = window.db.collection("orders")
       .orderBy("createdAt", "desc")
@@ -308,42 +347,28 @@ function App() {
           snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
           setOrders(list);
         },
-        () => {
-          window.db.collection("orders").limit(60).get().then(snap => {
-            const list = [];
-            snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-            setOrders(list);
-          }).catch(() => {});
-        }
+        () => {}
       );
 
     return () => unsubscribe();
-  }, []);
+  }, [isAdminAuthenticated]);
 
-  // 4. Admin Password Listener from Firebase Firestore
-  // Security: the password lives ONLY in Firestore. It is never written
-  // in the code and no default password is seeded. When the admin doc
-  // does not exist yet, the owner creates a password on first login.
+  // 3b. Public Order-Tracking Listener (order_tracking docs carry no
+  // customer data — only status, totals and items — so anyone may read them)
+  const [trackingOrders, setTrackingOrders] = useState([]);
   useEffect(() => {
     if (!window.db) return;
-
-    const unsubscribe = window.db.collection("settings").doc("admin").onSnapshot(
-      (doc) => {
-        if (doc.exists) {
-          const data = doc.data();
-          if (data && data.password && typeof data.password === "string" && data.password.trim()) {
-            setAdminPassword(data.password.trim());
-            setNeedsAdminSetup(false);
-          } else {
-            setNeedsAdminSetup(true);
-          }
-        } else {
-          setNeedsAdminSetup(true);
-        }
-      },
-      (err) => console.warn("Admin password listener notice:", err)
-    );
-
+    const unsubscribe = window.db.collection("order_tracking")
+      .orderBy("createdAt", "desc")
+      .limit(60)
+      .onSnapshot(
+        (snapshot) => {
+          const list = [];
+          snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+          setTrackingOrders(list);
+        },
+        () => {}
+      );
     return () => unsubscribe();
   }, []);
 
@@ -661,6 +686,11 @@ function App() {
     try {
       if (window.db && orderId) {
         await window.db.collection("orders").doc(orderId).update({ status: newStatus });
+        // Keep the public tracking copy in sync so customers see the new status.
+        const order = orders.find(o => o.id === orderId);
+        if (order && order.orderNumber) {
+          window.db.collection("order_tracking").doc(order.orderNumber).update({ status: newStatus }).catch(() => {});
+        }
         showToast(`تم تحديث حالة الطلب إلى "${newStatus}"`);
       }
     } catch (e) {
@@ -698,77 +728,72 @@ function App() {
     }
   };
 
-  const handlePasswordSubmit = (submittedPwd) => {
-    const trimmed = (submittedPwd || "").trim();
-    // First run: no password exists yet — the submitted password becomes
-    // the admin password (stored in Firestore only, never in code).
-    if (needsAdminSetup) {
-      if (trimmed.length < 6) {
-        setPasswordError("اختاري كلمة مرور لا تقل عن 6 خانات");
-        return;
-      }
-      if (window.db) {
-        window.db.collection("settings").doc("admin").set({
-          password: trimmed,
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(err => console.warn("Save admin password notice:", err));
-      }
-      setAdminPassword(trimmed);
-      setNeedsAdminSetup(false);
-      setIsAdminAuthenticated(true);
-      try { sessionStorage.setItem("admin_authenticated", "true"); } catch (e) {}
-      setIsPasswordModalOpen(false);
-      setAdminTab("products");
-      setIsAdminOpen(true);
-      setPasswordError("");
-      showToast("تم إنشاء كلمة مرور الأدمن بنجاح");
+  // Admin login through Firebase Authentication (email + password account
+  // created by the owner in the Firebase console). No password is checked
+  // against Firestore anymore.
+  const handleAdminLogin = async (email, password) => {
+    const mail = (email || "").trim();
+    const pwd = (password || "").trim();
+    if (!mail || !pwd) {
+      setPasswordError("اكتبي الإيميل وكلمة المرور");
       return;
     }
-    if (adminPassword && trimmed === adminPassword) {
-      setIsAdminAuthenticated(true);
-      try { sessionStorage.setItem("admin_authenticated", "true"); } catch (e) {}
+    if (!window.auth) {
+      setPasswordError("خدمة الدخول غير متاحة حالياً، حاولي بعد قليل");
+      return;
+    }
+    try {
+      await window.auth.signInWithEmailAndPassword(mail, pwd);
       setIsPasswordModalOpen(false);
       setAdminTab("products");
       setIsAdminOpen(true);
       setPasswordError("");
       showToast("مرحباً بكِ في لوحة الإدارة");
-    } else {
-      setPasswordError("كلمة المرور غير صحيحة، يرجى المحاولة مرة أخرى");
+    } catch (err) {
+      if (err && err.code === "auth/too-many-requests") {
+        setPasswordError("محاولات كثيرة — انتظري دقيقة وحاولي تاني");
+      } else if (err && (err.code === "auth/user-not-found" || err.code === "auth/operation-not-allowed")) {
+        setPasswordError("مفيش حساب أدمن بالإيميل ده — أنشئيه من Firebase Console");
+      } else {
+        setPasswordError("بيانات الدخول غير صحيحة، تأكدي وحاولي تاني");
+      }
     }
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    try { if (window.auth) await window.auth.signOut(); } catch (e) {}
     setIsAdminAuthenticated(false);
-    try { sessionStorage.removeItem("admin_authenticated"); } catch (e) {}
+    setAdminUser(null);
+    setOrders([]);
     setIsAdminOpen(false);
     showToast("تم قفل لوحة الإدارة وتسجيل الخروج");
   };
 
+  // Change the Firebase Auth admin password (the account itself).
   const handleUpdateAdminPassword = async (newPassword) => {
     const trimmed = (newPassword || "").trim();
     if (!trimmed || trimmed.length < 6) {
       showToast("كلمة المرور يجب ألا تقل عن 6 خانات", "error");
       return false;
     }
-    setAdminPassword(trimmed);
-    if (window.db) {
-      try {
-        await window.db.collection("settings").doc("admin").set({
-          password: trimmed,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-        await window.db.collection("settings").doc("store").set({
-          adminPassword: trimmed
-        }, { merge: true });
-        showToast("تم حفظ كلمة المرور في قاعدة بيانات فايربيس بنجاح!");
-      } catch (err) {
-        console.warn("Update password error:", err);
-        showToast("تم حفظ كلمة المرور محلياً", "warning");
-      }
-    } else {
-      showToast("تم حفظ كلمة المرور محلياً");
+    const user = (window.auth && window.auth.currentUser) || adminUser;
+    if (!user) {
+      showToast("سجّلي الدخول أولاً", "error");
+      return false;
     }
-    return true;
+    try {
+      await user.updatePassword(trimmed);
+      showToast("تم تغيير كلمة مرور الأدمن بنجاح");
+      return true;
+    } catch (err) {
+      if (err && err.code === "auth/requires-recent-login") {
+        showToast("لأمانك سجّلي الدخول من جديد ثم غيّري كلمة المرور", "error");
+      } else {
+        console.warn("Update password error:", err);
+        showToast("تعذر تغيير كلمة المرور", "error");
+      }
+      return false;
+    }
   };
 
   // ==============================================================
@@ -941,9 +966,10 @@ function App() {
   }, [products]);
 
   // Best sellers: top products by sold quantity across all orders
+  // (computed from the public order_tracking docs, not the admin orders)
   const bestSellers = useMemo(() => {
     const sold = {};
-    orders.forEach(o => {
+    trackingOrders.forEach(o => {
       (o.items || []).forEach(item => {
         sold[item.id] = (sold[item.id] || 0) + (item.quantity || 1);
       });
@@ -953,7 +979,7 @@ function App() {
       .slice(0, 6)
       .map(([id]) => products.find(p => p.id === id))
       .filter(Boolean);
-  }, [orders, products]);
+  }, [trackingOrders, products]);
 
   // Average rating per product
   const ratingsByProduct = useMemo(() => {
@@ -1018,6 +1044,22 @@ function App() {
     try {
       if (window.db) {
         await window.db.collection("orders").add(orderData);
+        // Public tracking copy: status + totals + items only, NO customer
+        // data. The phone is stored only as a SHA-256 hash so customers
+        // can still look up their order by phone.
+        const phoneHash = await hashPhoneNumber(phoneDigits);
+        window.db.collection("order_tracking").doc(orderNumber).set({
+          orderNumber,
+          phoneHash,
+          status: "جديد",
+          items: cart.map(item => ({ id: item.id || "", name: item.name || "", quantity: item.quantity || 1, price: item.price || 0 })),
+          subtotal,
+          shippingCost,
+          promoCode: appliedCoupon ? appliedCoupon.code : null,
+          discount: promoDiscount,
+          grandTotal,
+          createdAt: new Date().toISOString()
+        }).catch(() => {});
         // Decrease stock for ordered items (only products with a numeric stock)
         const FieldValue = (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue : null;
         if (FieldValue) {
@@ -1221,15 +1263,14 @@ function App() {
       <TrackOrderModal
         isOpen={isTrackOpen}
         onClose={() => setIsTrackOpen(false)}
-        orders={orders}
+        orders={trackingOrders}
       />
 
       {/* Admin Password Authentication Modal */}
       <AdminPasswordModal
         isOpen={isPasswordModalOpen}
-        isSetup={needsAdminSetup}
         onClose={() => { setIsPasswordModalOpen(false); setPasswordError(""); }}
-        onSubmit={handlePasswordSubmit}
+        onSubmit={handleAdminLogin}
         error={passwordError}
         setError={setPasswordError}
       />
@@ -1264,7 +1305,6 @@ function App() {
         updateProduct={updateProduct}
         reorderProducts={reorderProducts}
         resetDefaultProducts={resetDefaultProducts}
-        adminPassword={adminPassword}
         onUpdateAdminPassword={handleUpdateAdminPassword}
         onLogout={handleAdminLogout}
         coupons={coupons}
