@@ -260,7 +260,7 @@ window.CATEGORIES = CATEGORIES;
 window.DEFAULT_STORE_SETTINGS = DEFAULT_STORE_SETTINGS;
 window.INITIAL_PRODUCTS = INITIAL_PRODUCTS;
 
-// Default discount coupons (used until the Firestore "coupons"
+// Default discount coupons (used until the Realtime Database "coupons"
 // collection has entries; managed from the admin coupons tab)
 window.DEFAULT_COUPONS = [
   { id: "default-galena10", code: "GALENA10", type: "percent", value: 10, minSubtotal: 0, active: true },

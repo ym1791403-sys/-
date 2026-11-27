@@ -769,7 +769,7 @@ function AdminModal({
               {dbStatus === "permission_denied" && (
                 <div className="bg-amber-50 border border-amber-300 p-2.5 rounded-lg text-amber-900 text-[11px] space-y-1">
                   <p className="font-bold">تنبيه صلاحيات قاعدة البيانات:</p>
-                  <p>يرجى التأكد من ضبط قواعد Firestore للسماح بالقراءة والكتابة.</p>
+                  <p>يرجى التأكد من ضبط قواعد Realtime Database للسماح بالقراءة والكتابة.</p>
                 </div>
               )}
 
