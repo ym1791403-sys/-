@@ -84,7 +84,7 @@ function App() {
   const [quickViewColor, setQuickViewColor] = useState("");
   const [policyModal, setPolicyModal] = useState(null); // 'privacy' | 'returns' | 'terms' | 'shipping'
 
-  // Admin Dashboard State (Discreet trigger & Firebase Password Protection)
+  // Admin Dashboard State (Footer brand trigger & Firebase Password Protection)
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminTab, setAdminTab] = useState("products"); // "products" | "orders" | "add" | "settings" | "coupons"
   // Security: the admin password is NEVER written in this code. It lives
@@ -1147,10 +1147,9 @@ function App() {
         onSelectTab={(tab) => setPolicyModal(tab)}
       />
 
-      {/* Floating Action Buttons & Discreet Control Trigger */}
+      {/* Floating Action Buttons */}
       <FloatingActions
         storeSettings={storeSettings}
-        onOpenAdmin={handleOpenAdminTrigger}
       />
 
       {/* Cart Drawer */}

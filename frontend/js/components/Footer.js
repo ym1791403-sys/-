@@ -10,7 +10,13 @@ function Footer({ storeSettings, onOpenAdmin, onOpenPolicy }) {
         {/* Top Row: Store Info & Social */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-stone-800 text-center sm:text-right">
           <div>
-            <span className="font-playfair text-lg font-bold text-white block">Chic Shop Galena's</span>
+            <button
+              onClick={() => onOpenAdmin && onOpenAdmin()}
+              className="font-playfair text-lg font-bold text-white block cursor-pointer hover:text-amber-300 transition"
+              title="لوحة التحكم"
+            >
+              Chic Shop Galena's
+            </button>
             <p className="text-stone-400 text-xs mt-0.5">متجر إلكتروني متخصص في الإكسسوارات النسائية المطلية والمجوهرات العصرية.</p>
           </div>
           
