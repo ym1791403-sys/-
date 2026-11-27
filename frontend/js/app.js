@@ -457,6 +457,19 @@ function App() {
   // ADMIN DASHBOARD ACTIONS
   // ==============================================================
 
+  // A Realtime Database write that never settles (no live connection) must
+  // not freeze the UI: race it against a timeout. The SDK keeps the write
+  // queued and sends it when the connection returns.
+  const withDbTimeout = (promise, ms = 8000) => {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("db-timeout")), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  };
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
     if (!newProduct.name.trim() || !newProduct.price) {
@@ -493,7 +506,7 @@ function App() {
       if (window.db) {
         try {
           const newRef = window.db.ref("products").push();
-          await newRef.set(productPayload);
+          await withDbTimeout(newRef.set(productPayload));
           createdId = newRef.key;
         } catch (e) {
           console.warn("Database add failed, adding locally:", e);
@@ -531,7 +544,7 @@ function App() {
     try {
       if (window.db) {
         try {
-          await window.db.ref("products/" + id).remove();
+          await withDbTimeout(window.db.ref("products/" + id).remove());
         } catch (e) {
           console.warn("Database delete notice:", e);
         }
@@ -579,7 +592,7 @@ function App() {
         if (newOldPrice !== null && newOldPrice !== undefined && newOldPrice !== "") {
           payload.oldPrice = Number(newOldPrice);
         }
-        await window.db.ref("products/" + id).update(payload);
+        await withDbTimeout(window.db.ref("products/" + id).update(payload));
       } catch (e) {
         console.warn("Database price update notice:", e);
       }
@@ -627,7 +640,7 @@ function App() {
           oldPrice: numOldPrice
         };
         if (catObj) payload.categoryName = catObj.name;
-        await window.db.ref("products/" + id).update(payload);
+        await withDbTimeout(window.db.ref("products/" + id).update(payload));
       } catch (e) {
         console.warn("Database product update:", e);
       }
@@ -655,40 +668,49 @@ function App() {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    const order = orders.find(o => o.id === orderId);
+    // Optimistic local update so the UI responds immediately.
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     try {
       if (window.db && orderId) {
-        await window.db.ref("orders/" + orderId).update({ status: newStatus });
+        await withDbTimeout(window.db.ref("orders/" + orderId).update({ status: newStatus }));
         // Keep the public tracking copy in sync so customers see the new status.
-        const order = orders.find(o => o.id === orderId);
         if (order && order.orderNumber) {
           window.db.ref("order_tracking/" + order.orderNumber).update({ status: newStatus }).catch(() => {});
         }
         showToast(`تم تحديث حالة الطلب إلى "${newStatus}"`);
       }
     } catch (e) {
-      showToast("تعذر تحديث الحالة", "error");
+      if (e && e.message === "db-timeout") {
+        showToast("تم التحديث على جهازك، وستتم المزامنة عند عودة الاتصال", "error");
+      } else {
+        showToast("تعذر تحديث الحالة", "error");
+      }
     }
   };
 
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
     const updated = { ...tempSettings, storeName: "Chic Shop Galena's" };
+    // Save locally first: the store uses the new settings immediately,
+    // even if the database sync is slow or offline.
+    setStoreSettings(updated);
+    try { localStorage.setItem("store_settings", JSON.stringify(updated)); } catch (e) {}
+    setIsAdminOpen(false);
+    setIsSavingSettings(false);
+    if (!window.db) {
+      showToast("تم الحفظ على هذا الجهاز فقط", "error");
+      return;
+    }
     try {
-      if (window.db) {
-        // Realtime Database update() rejects undefined values, so strip them.
-        const clean = {};
-        Object.keys(updated).forEach(k => { if (updated[k] !== undefined) clean[k] = updated[k]; });
-        await window.db.ref("settings/store").update(clean);
-        showToast("تم حفظ الإعدادات بنجاح");
-      }
-      setStoreSettings(updated);
-      localStorage.setItem("store_settings", JSON.stringify(updated));
-      setIsAdminOpen(false);
+      // Realtime Database update() rejects undefined values, so strip them.
+      const clean = {};
+      Object.keys(updated).forEach(k => { if (updated[k] !== undefined) clean[k] = updated[k]; });
+      await withDbTimeout(window.db.ref("settings/store").update(clean));
+      showToast("تم حفظ الإعدادات بنجاح");
     } catch (err) {
       console.error(err);
-      showToast("تعذر حفظ الإعدادات", "error");
-    } finally {
-      setIsSavingSettings(false);
+      showToast("تم الحفظ على جهازك، لكن المزامنة مع قاعدة البيانات لم تكتمل — تحقق من الاتصال وحاول الحفظ تاني", "error");
     }
   };
 
@@ -829,7 +851,7 @@ function App() {
     try {
       if (window.db) {
         const newRef = window.db.ref("coupons").push();
-        await newRef.set(payload);
+        await withDbTimeout(newRef.set(payload));
         setCoupons(prev => [...prev, { id: newRef.key, ...payload }]);
       } else {
         setCoupons(prev => [...prev, { id: Date.now().toString(), ...payload }]);
@@ -845,7 +867,7 @@ function App() {
   const deleteCoupon = async (id) => {
     const isLocalOnly = String(id).startsWith("default-");
     try {
-      if (window.db && !isLocalOnly) await window.db.ref("coupons/" + id).remove();
+      if (window.db && !isLocalOnly) await withDbTimeout(window.db.ref("coupons/" + id).remove());
       setCoupons(prev => prev.filter(c => c.id !== id));
       showToast("تم حذف الكوبون");
     } catch (err) {
@@ -856,7 +878,7 @@ function App() {
   const toggleCoupon = async (id, active) => {
     const isLocalOnly = String(id).startsWith("default-");
     try {
-      if (window.db && !isLocalOnly) await window.db.ref("coupons/" + id).update({ active });
+      if (window.db && !isLocalOnly) await withDbTimeout(window.db.ref("coupons/" + id).update({ active }));
       setCoupons(prev => prev.map(c => c.id === id ? { ...c, active } : c));
     } catch (err) {
       showToast("تعذر تحديث الكوبون", "error");
@@ -879,7 +901,7 @@ function App() {
     try {
       if (window.db) {
         const newRef = window.db.ref("reviews").push();
-        await newRef.set(payload);
+        await withDbTimeout(newRef.set(payload));
         setReviews(prev => [{ id: newRef.key, ...payload }, ...prev]);
       } else {
         setReviews(prev => [{ id: Date.now().toString(), ...payload }, ...prev]);
@@ -1024,7 +1046,7 @@ function App() {
 
     try {
       if (window.db) {
-        await window.db.ref("orders").push(orderData);
+        await withDbTimeout(window.db.ref("orders").push(orderData));
         // Public tracking copy: status + totals + items only, NO customer
         // data. The phone is stored only as a SHA-256 hash so customers
         // can still look up their order by phone.
