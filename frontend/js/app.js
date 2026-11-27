@@ -754,9 +754,9 @@ function App() {
         // No Firebase error code means the request never reached Firebase
         // (blocked by the browser, offline, or Firebase unreachable) —
         // this is NOT a wrong-password failure.
-        setPasswordError("تعذّر الاتصال بـ Firebase — حدّث الصفحة وحاول تاني، وتأكد من الإنترنت (دي مش مشكلة باسورد)");
+        setPasswordError("تعذّر الاتصال بقاعدة البيانات — حدّث الصفحة وحاول تاني، وتأكد من الإنترنت (دي مش مشكلة باسورد)");
       } else {
-        setPasswordError("كلمة المرور غير صحيحة، أو حساب الأدمن لسه متعملش — تأكد من Firebase Console");
+        setPasswordError("كلمة المرور غير صحيحة، أو حساب الأدمن لسه متعملش");
       }
     }
   };
@@ -768,33 +768,6 @@ function App() {
     setOrders([]);
     setIsAdminOpen(false);
     showToast("تم قفل لوحة الإدارة وتسجيل الخروج");
-  };
-
-  // Change the Firebase Auth admin password (the account itself).
-  const handleUpdateAdminPassword = async (newPassword) => {
-    const trimmed = (newPassword || "").trim();
-    if (!trimmed || trimmed.length < 6) {
-      showToast("كلمة المرور يجب ألا تقل عن 6 خانات", "error");
-      return false;
-    }
-    const user = (window.auth && window.auth.currentUser) || adminUser;
-    if (!user) {
-      showToast("سجّل الدخول أولاً", "error");
-      return false;
-    }
-    try {
-      await user.updatePassword(trimmed);
-      showToast("تم تغيير كلمة مرور الأدمن بنجاح");
-      return true;
-    } catch (err) {
-      if (err && err.code === "auth/requires-recent-login") {
-        showToast("لأمانك سجّل الدخول من جديد ثم غيّر كلمة المرور", "error");
-      } else {
-        console.warn("Update password error:", err);
-        showToast("تعذر تغيير كلمة المرور", "error");
-      }
-      return false;
-    }
   };
 
   // ==============================================================
@@ -1139,7 +1112,6 @@ function App() {
       updateProduct={updateProduct}
       reorderProducts={reorderProducts}
       resetDefaultProducts={resetDefaultProducts}
-      onUpdateAdminPassword={handleUpdateAdminPassword}
       onLogout={handleAdminLogout}
       coupons={coupons}
       lowStockProducts={lowStockProducts}

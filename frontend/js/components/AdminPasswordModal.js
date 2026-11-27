@@ -126,10 +126,10 @@ function AdminPasswordModal({
         <div className="mt-4 pt-3 border-t border-stone-100 text-center">
           <span className="text-[10px] text-stone-400 flex items-center justify-center gap-1">
             <i className="fa-solid fa-shield-halved text-emerald-600"></i>
-            <span>دخول آمن عبر Firebase Authentication</span>
+            <span>دخول آمن</span>
           </span>
           <p className="text-[10px] text-stone-400 mt-1">
-            حساب الأدمن بيتعمل من Firebase Console ← Authentication ← Add user بالإيميل admin@chicshopgalena.com
+            حساب الأدمن: admin@chicshopgalena.com
           </p>
         </div>
 
