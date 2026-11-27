@@ -6,12 +6,43 @@ function QuickViewModal({
   setQuickViewProduct,
   quickViewColor,
   setQuickViewColor,
-  onAddToCart
+  onAddToCart,
+  reviews,
+  rating,
+  onAddReview
 }) {
+  const [reviewName, setReviewName] = React.useState("");
+  const [reviewRating, setReviewRating] = React.useState(5);
+  const [reviewComment, setReviewComment] = React.useState("");
+
+  React.useEffect(() => {
+    setReviewName("");
+    setReviewComment("");
+    setReviewRating(5);
+  }, [quickViewProduct && quickViewProduct.id]);
+
   if (!quickViewProduct) return null;
 
   const displayImg = (quickViewProduct.images && quickViewProduct.images[0]) || 
     "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop";
+
+  const renderStars = (value) => {
+    const full = Math.round(Number(value) || 0);
+    return [1, 2, 3, 4, 5].map(n => (
+      <i key={n} className={`fa-${n <= full ? "solid" : "regular"} fa-star`}></i>
+    ));
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!onAddReview) return;
+    const ok = await onAddReview(quickViewProduct.id, { name: reviewName, rating: reviewRating, comment: reviewComment });
+    if (ok) {
+      setReviewName("");
+      setReviewComment("");
+      setReviewRating(5);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
@@ -93,6 +124,68 @@ function QuickViewModal({
               <span>إضافة للسلة ({quickViewProduct.price} ج.م)</span>
             </button>
           </div>
+        </div>
+
+        {/* Customer Reviews */}
+        <div className="mt-6 pt-4 border-t border-stone-200">
+          <h4 className="font-bold text-stone-900 text-sm mb-2">تقييمات العملاء</h4>
+          {rating && rating.count > 0 ? (
+            <div className="flex items-center gap-1.5 mb-3">
+              <span className="text-amber-500">{renderStars(rating.average)}</span>
+              <span className="text-stone-600">{rating.average.toFixed(1)} من 5 ({rating.count} تقييم)</span>
+            </div>
+          ) : (
+            <p className="text-stone-500 mb-3">لا توجد تقييمات بعد — كوني أول من يقيّم هذه القطعة</p>
+          )}
+
+          {reviews && reviews.length > 0 && (
+            <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+              {reviews.slice(0, 5).map(r => (
+                <div key={r.id} className="bg-stone-50 border border-stone-200 rounded-lg p-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-stone-800">{r.name}</span>
+                    <span className="text-amber-500 text-[11px]">{renderStars(r.rating)}</span>
+                  </div>
+                  <p className="text-stone-600 mt-0.5">{r.comment}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmitReview} className="space-y-2 bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <p className="font-bold text-stone-800">أضيفي تقييمكِ</p>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(n => (
+                <button
+                  type="button"
+                  key={n}
+                  onClick={() => setReviewRating(n)}
+                  className={`text-lg ${n <= reviewRating ? "text-amber-500" : "text-stone-300"}`}
+                >
+                  <i className="fa-solid fa-star"></i>
+                </button>
+              ))}
+            </div>
+            <input
+              type="text"
+              required
+              value={reviewName}
+              onChange={(e) => setReviewName(e.target.value)}
+              placeholder="اسمكِ"
+              className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
+            />
+            <textarea
+              rows="2"
+              required
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="رأيكِ في القطعة..."
+              className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:border-stone-800"
+            ></textarea>
+            <button type="submit" className="bg-stone-900 hover:bg-stone-800 text-white font-bold px-4 py-2 rounded-lg text-xs">
+              نشر التقييم
+            </button>
+          </form>
         </div>
       </div>
     </div>

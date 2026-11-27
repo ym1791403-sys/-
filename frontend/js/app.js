@@ -86,8 +86,12 @@ function App() {
 
   // Admin Dashboard State (Discreet trigger & Firebase Password Protection)
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState("products"); // "products" | "orders" | "add" | "settings"
-  const [adminPassword, setAdminPassword] = useState("20JUDY08");
+  const [adminTab, setAdminTab] = useState("products"); // "products" | "orders" | "add" | "settings" | "coupons"
+  // Security: the admin password is NEVER written in this code. It lives
+  // only in Firestore (settings/admin). It starts empty until the
+  // Firestore listener loads it, or the owner creates one on first run.
+  const [adminPassword, setAdminPassword] = useState("");
+  const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
     try {
       return sessionStorage.getItem("admin_authenticated") === "true";
@@ -104,6 +108,7 @@ function App() {
     category: "necklaces",
     price: "",
     oldPrice: "",
+    stock: 10,
     imageData: "",
     colors: "ذهبي, فضي",
     description: "",
@@ -172,9 +177,17 @@ function App() {
   });
   const [checkoutSuccess, setCheckoutSuccess] = useState(null);
 
-  // Promo code & gift options
+  // Promo code state
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [promoError, setPromoError] = useState("");
+
+  // Gift wrap options
   const [includeGiftWrap, setIncludeGiftWrap] = useState(false);
   const [giftNote, setGiftNote] = useState("");
+
+  // Order tracking modal
+  const [isTrackOpen, setIsTrackOpen] = useState(false);
 
   // Toast Alerts
   const [toast, setToast] = useState(null);
@@ -308,6 +321,9 @@ function App() {
   }, []);
 
   // 4. Admin Password Listener from Firebase Firestore
+  // Security: the password lives ONLY in Firestore. It is never written
+  // in the code and no default password is seeded. When the admin doc
+  // does not exist yet, the owner creates a password on first login.
   useEffect(() => {
     if (!window.db) return;
 
@@ -317,18 +333,50 @@ function App() {
           const data = doc.data();
           if (data && data.password && typeof data.password === "string" && data.password.trim()) {
             setAdminPassword(data.password.trim());
+            setNeedsAdminSetup(false);
+          } else {
+            setNeedsAdminSetup(true);
           }
         } else {
-          // Initialize/seed password in Firebase Firestore
-          window.db.collection("settings").doc("admin").set({
-            password: "20JUDY08",
-            updatedAt: new Date().toISOString()
-          }, { merge: true }).catch(err => console.warn("Seed admin password notice:", err));
+          setNeedsAdminSetup(true);
         }
       },
       (err) => console.warn("Admin password listener notice:", err)
     );
 
+    return () => unsubscribe();
+  }, []);
+
+  // 5. Coupons Listener (falls back to DEFAULT_COUPONS when empty)
+  const [coupons, setCoupons] = useState(window.DEFAULT_COUPONS || []);
+  useEffect(() => {
+    if (!window.db) return;
+    const unsubscribe = window.db.collection("coupons").onSnapshot(
+      (snapshot) => {
+        const list = [];
+        snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+        if (list.length > 0) setCoupons(list);
+      },
+      () => {}
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // 6. Reviews Listener
+  const [reviews, setReviews] = useState([]);
+  useEffect(() => {
+    if (!window.db) return;
+    const unsubscribe = window.db.collection("reviews")
+      .orderBy("createdAt", "desc")
+      .limit(200)
+      .onSnapshot(
+        (snapshot) => {
+          const list = [];
+          snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+          setReviews(list);
+        },
+        () => {}
+      );
     return () => unsubscribe();
   }, []);
 
@@ -347,6 +395,18 @@ function App() {
 
   const addToCart = (product, color = null) => {
     const chosenColor = color || (product.colors && product.colors[0]) || "الافتراضي";
+    // Do not sell more than the available stock (when stock is tracked)
+    if (typeof product.stock === "number") {
+      const inCart = cart.filter(item => item.id === product.id).reduce((acc, item) => acc + item.quantity, 0);
+      if (product.stock <= 0) {
+        showToast("هذه القطعة نفدت من المخزون حالياً", "error");
+        return;
+      }
+      if (inCart >= product.stock) {
+        showToast(`الكمية المتاحة من هذه القطعة ${product.stock} فقط`, "error");
+        return;
+      }
+    }
     setCart(prev => {
       const idx = prev.findIndex(item => item.id === product.id && item.color === chosenColor);
       if (idx > -1) {
@@ -421,6 +481,9 @@ function App() {
       price: parseFloat(newProduct.price),
       oldPrice: newProduct.oldPrice ? parseFloat(newProduct.oldPrice) : null,
       inStock: true,
+      stock: (newProduct.stock === "" || newProduct.stock === undefined || newProduct.stock === null)
+        ? 10
+        : Math.max(0, parseInt(newProduct.stock, 10) || 0),
       colors: parsedColors.length > 0 ? parsedColors : ["ذهبي"],
       images: [
         newProduct.imageData || "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop"
@@ -451,6 +514,7 @@ function App() {
         category: "necklaces",
         price: "",
         oldPrice: "",
+        stock: 10,
         imageData: "",
         colors: "ذهبي, فضي",
         description: "",
@@ -585,7 +649,7 @@ function App() {
 
   // Reset to Initial Products
   const resetDefaultProducts = () => {
-    if (!confirm("هل ترغبين في استعادة التشكيلة والأسعار الأصلية الـ 6؟")) return;
+    if (!confirm("هل ترغبين في استعادة التشكيلة والأسعار الأصلية؟")) return;
     if (window.INITIAL_PRODUCTS && window.INITIAL_PRODUCTS.length > 0) {
       setProducts(window.INITIAL_PRODUCTS);
       localStorage.setItem("store_products", JSON.stringify(window.INITIAL_PRODUCTS));
@@ -636,7 +700,31 @@ function App() {
 
   const handlePasswordSubmit = (submittedPwd) => {
     const trimmed = (submittedPwd || "").trim();
-    if (trimmed === adminPassword || trimmed === "20JUDY08") {
+    // First run: no password exists yet — the submitted password becomes
+    // the admin password (stored in Firestore only, never in code).
+    if (needsAdminSetup) {
+      if (trimmed.length < 6) {
+        setPasswordError("اختاري كلمة مرور لا تقل عن 6 خانات");
+        return;
+      }
+      if (window.db) {
+        window.db.collection("settings").doc("admin").set({
+          password: trimmed,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(err => console.warn("Save admin password notice:", err));
+      }
+      setAdminPassword(trimmed);
+      setNeedsAdminSetup(false);
+      setIsAdminAuthenticated(true);
+      try { sessionStorage.setItem("admin_authenticated", "true"); } catch (e) {}
+      setIsPasswordModalOpen(false);
+      setAdminTab("products");
+      setIsAdminOpen(true);
+      setPasswordError("");
+      showToast("تم إنشاء كلمة مرور الأدمن بنجاح");
+      return;
+    }
+    if (adminPassword && trimmed === adminPassword) {
       setIsAdminAuthenticated(true);
       try { sessionStorage.setItem("admin_authenticated", "true"); } catch (e) {}
       setIsPasswordModalOpen(false);
@@ -658,8 +746,8 @@ function App() {
 
   const handleUpdateAdminPassword = async (newPassword) => {
     const trimmed = (newPassword || "").trim();
-    if (!trimmed || trimmed.length < 4) {
-      showToast("كلمة المرور يجب ألا تقل عن 4 خانات", "error");
+    if (!trimmed || trimmed.length < 6) {
+      showToast("كلمة المرور يجب ألا تقل عن 6 خانات", "error");
       return false;
     }
     setAdminPassword(trimmed);
@@ -681,6 +769,121 @@ function App() {
       showToast("تم حفظ كلمة المرور محلياً");
     }
     return true;
+  };
+
+  // ==============================================================
+  // PROMO CODES
+  // ==============================================================
+
+  const applyPromoCode = () => {
+    const code = (promoInput || "").trim().toUpperCase();
+    if (!code) {
+      setPromoError("اكتبي كود الخصم أولاً");
+      return;
+    }
+    const found = (coupons || []).find(c => c.active !== false && (c.code || "").toUpperCase() === code);
+    if (!found) {
+      setPromoError("الكود غير صحيح أو غير مفعّل");
+      setAppliedCoupon(null);
+      return;
+    }
+    if (found.minSubtotal && subtotal < Number(found.minSubtotal)) {
+      setPromoError(`هذا الكود يحتاج طلباً بقيمة ${found.minSubtotal} ج.م على الأقل`);
+      setAppliedCoupon(null);
+      return;
+    }
+    setAppliedCoupon(found);
+    setPromoError("");
+    showToast(`تم تطبيق كود الخصم ${found.code}`);
+  };
+
+  const removePromoCode = () => {
+    setAppliedCoupon(null);
+    setPromoInput("");
+    setPromoError("");
+  };
+
+  const addCoupon = async (coupon) => {
+    const code = (coupon.code || "").trim().toUpperCase();
+    const value = Number(coupon.value);
+    if (!code || !value || value <= 0) {
+      showToast("اكتبي كوداً وقيمة صحيحة للخصم", "error");
+      return false;
+    }
+    if (coupon.type === "percent" && value > 90) {
+      showToast("نسبة الخصم لا تزيد عن 90%", "error");
+      return false;
+    }
+    const payload = {
+      code,
+      type: coupon.type === "fixed" ? "fixed" : "percent",
+      value,
+      minSubtotal: Number(coupon.minSubtotal) || 0,
+      active: true,
+      createdAt: new Date().toISOString()
+    };
+    try {
+      if (window.db) {
+        const docRef = await window.db.collection("coupons").add(payload);
+        setCoupons(prev => [...prev, { id: docRef.id, ...payload }]);
+      } else {
+        setCoupons(prev => [...prev, { id: Date.now().toString(), ...payload }]);
+      }
+      showToast("تمت إضافة الكوبون بنجاح");
+      return true;
+    } catch (err) {
+      showToast("تعذر حفظ الكوبون", "error");
+      return false;
+    }
+  };
+
+  const deleteCoupon = async (id) => {
+    const isLocalOnly = String(id).startsWith("default-");
+    try {
+      if (window.db && !isLocalOnly) await window.db.collection("coupons").doc(id).delete();
+      setCoupons(prev => prev.filter(c => c.id !== id));
+      showToast("تم حذف الكوبون");
+    } catch (err) {
+      showToast("تعذر حذف الكوبون", "error");
+    }
+  };
+
+  const toggleCoupon = async (id, active) => {
+    const isLocalOnly = String(id).startsWith("default-");
+    try {
+      if (window.db && !isLocalOnly) await window.db.collection("coupons").doc(id).update({ active });
+      setCoupons(prev => prev.map(c => c.id === id ? { ...c, active } : c));
+    } catch (err) {
+      showToast("تعذر تحديث الكوبون", "error");
+    }
+  };
+
+  // ==============================================================
+  // PRODUCT REVIEWS
+  // ==============================================================
+
+  const addReview = async (productId, review) => {
+    const name = (review.name || "").trim();
+    const comment = (review.comment || "").trim();
+    const rating = Number(review.rating) || 0;
+    if (!name || !comment || rating < 1 || rating > 5) {
+      showToast("اكتبي اسمكِ وتقييمكِ وتعليقكِ", "error");
+      return false;
+    }
+    const payload = { productId, name, comment, rating, createdAt: new Date().toISOString() };
+    try {
+      if (window.db) {
+        const docRef = await window.db.collection("reviews").add(payload);
+        setReviews(prev => [{ id: docRef.id, ...payload }, ...prev]);
+      } else {
+        setReviews(prev => [{ id: Date.now().toString(), ...payload }, ...prev]);
+      }
+      showToast("شكراً! تم نشر تقييمكِ");
+      return true;
+    } catch (err) {
+      showToast("تعذر حفظ التقييم، حاولي مرة أخرى", "error");
+      return false;
+    }
   };
 
   // ==============================================================
@@ -715,7 +918,13 @@ function App() {
   }, [subtotal, selectedShipping, storeSettings.freeShippingThreshold]);
 
   const giftWrapCost = includeGiftWrap ? 35 : 0;
-  const grandTotal = Math.max(0, subtotal + shippingCost + giftWrapCost);
+  const promoDiscount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    const val = Number(appliedCoupon.value) || 0;
+    if (appliedCoupon.type === "fixed") return Math.min(val, subtotal);
+    return Math.round(subtotal * (val / 100));
+  }, [appliedCoupon, subtotal]);
+  const grandTotal = Math.max(0, subtotal + shippingCost + giftWrapCost - promoDiscount);
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const totalSalesRevenue = useMemo(() => {
@@ -726,12 +935,58 @@ function App() {
     return orders.filter(o => o.status === "جديد" || !o.status).length;
   }, [orders]);
 
+  // Products running low on stock (tracked stock of 3 or fewer)
+  const lowStockProducts = useMemo(() => {
+    return products.filter(p => typeof p.stock === "number" && p.stock >= 0 && p.stock <= 3);
+  }, [products]);
+
+  // Best sellers: top products by sold quantity across all orders
+  const bestSellers = useMemo(() => {
+    const sold = {};
+    orders.forEach(o => {
+      (o.items || []).forEach(item => {
+        sold[item.id] = (sold[item.id] || 0) + (item.quantity || 1);
+      });
+    });
+    return Object.entries(sold)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([id]) => products.find(p => p.id === id))
+      .filter(Boolean);
+  }, [orders, products]);
+
+  // Average rating per product
+  const ratingsByProduct = useMemo(() => {
+    const map = {};
+    reviews.forEach(r => {
+      if (!r.productId) return;
+      if (!map[r.productId]) map[r.productId] = { total: 0, count: 0 };
+      map[r.productId].total += Number(r.rating) || 0;
+      map[r.productId].count += 1;
+    });
+    Object.keys(map).forEach(id => {
+      map[id].average = map[id].count ? map[id].total / map[id].count : 0;
+    });
+    return map;
+  }, [reviews]);
+
   // Submit Order
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
 
+    if (cart.length === 0) {
+      showToast("السلة فارغة، أضيفي منتجاً أولاً", "error");
+      return;
+    }
+
     if (!customer.name.trim() || !customer.phone.trim() || !customer.address.trim()) {
       showToast("يرجى ملء الاسم والهاتف والعنوان بالتفصيل", "error");
+      return;
+    }
+
+    const phoneDigits = customer.phone.replace(/[^0-9]/g, "");
+    if (!/^01[0-9]{9}$/.test(phoneDigits)) {
+      showToast("يرجى كتابة رقم هاتف مصري صحيح (11 رقماً يبدأ بـ 01)", "error");
       return;
     }
 
@@ -751,6 +1006,8 @@ function App() {
       items: cart,
       subtotal,
       shippingCost,
+      promoCode: appliedCoupon ? appliedCoupon.code : null,
+      discount: promoDiscount,
       grandTotal,
       includeGiftWrap,
       giftNote: giftNote.trim(),
@@ -761,6 +1018,25 @@ function App() {
     try {
       if (window.db) {
         await window.db.collection("orders").add(orderData);
+        // Decrease stock for ordered items (only products with a numeric stock)
+        const FieldValue = (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue : null;
+        if (FieldValue) {
+          cart.forEach(item => {
+            const prod = products.find(p => p.id === item.id);
+            if (prod && typeof prod.stock === "number") {
+              window.db.collection("products").doc(item.id).update({
+                stock: FieldValue.increment(-item.quantity)
+              }).catch(() => {});
+            }
+          });
+          setProducts(prev => prev.map(p => {
+            const item = cart.find(i => i.id === p.id);
+            if (item && typeof p.stock === "number") {
+              return { ...p, stock: Math.max(0, p.stock - item.quantity) };
+            }
+            return p;
+          }));
+        }
       }
     } catch (err) {
       console.warn("Order save notice:", err);
@@ -780,6 +1056,9 @@ function App() {
     });
 
     setCart([]);
+    setAppliedCoupon(null);
+    setPromoInput("");
+    setPromoError("");
     setIsCheckoutModalOpen(false);
     setIsSubmittingOrder(false);
     showToast("تم تأكيد طلبكِ بنجاح!");
@@ -800,10 +1079,40 @@ function App() {
         totalCartItems={totalCartItems}
         setIsWishlistOpen={setIsWishlistOpen}
         setIsCartOpen={setIsCartOpen}
+        onOpenTrack={() => setIsTrackOpen(true)}
       />
 
       {/* Hero Showcase Section */}
       <Hero storeSettings={storeSettings} />
+
+      {/* Best Sellers (computed from real orders) */}
+      {bestSellers.length > 0 && (
+        <section className="py-10 bg-white border-b border-stone-200">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <div className="flex items-center gap-2 mb-5">
+              <i className="fa-solid fa-fire text-amber-500"></i>
+              <h2 className="text-xl font-bold text-stone-900">الأكثر مبيعاً</h2>
+              <span className="text-xs text-stone-500">اختيارات عملائنا المفضلة</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+              {bestSellers.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  rating={ratingsByProduct[product.id]}
+                  isFavorite={wishlist.includes(product.id)}
+                  onToggleWishlist={toggleWishlist}
+                  onQuickView={(prod) => {
+                    setQuickViewProduct(prod);
+                    setQuickViewColor((prod.colors && prod.colors[0]) || "");
+                  }}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Product Catalog & FAQs */}
       <ProductGrid
@@ -811,6 +1120,7 @@ function App() {
         filteredProducts={filteredProducts}
         isLoadingProducts={isLoadingProducts}
         categories={window.CATEGORIES || []}
+        ratingsByProduct={ratingsByProduct}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         onResetFilters={() => { setSelectedCategory("all"); setSearchQuery(""); }}
@@ -855,6 +1165,7 @@ function App() {
         setIncludeGiftWrap={setIncludeGiftWrap}
         subtotal={subtotal}
         grandTotal={grandTotal}
+        promoDiscount={promoDiscount}
         onProceedCheckout={() => { setIsCartOpen(false); setIsCheckoutModalOpen(true); }}
       />
 
@@ -875,6 +1186,9 @@ function App() {
         quickViewColor={quickViewColor}
         setQuickViewColor={setQuickViewColor}
         onAddToCart={addToCart}
+        reviews={quickViewProduct ? reviews.filter(r => r.productId === quickViewProduct.id) : []}
+        rating={quickViewProduct ? ratingsByProduct[quickViewProduct.id] : undefined}
+        onAddReview={addReview}
       />
 
       {/* Checkout Modal */}
@@ -887,6 +1201,13 @@ function App() {
         selectedShipping={selectedShipping}
         shippingCost={shippingCost}
         grandTotal={grandTotal}
+        promoInput={promoInput}
+        setPromoInput={setPromoInput}
+        appliedCoupon={appliedCoupon}
+        promoError={promoError}
+        promoDiscount={promoDiscount}
+        onApplyPromo={applyPromoCode}
+        onRemovePromo={removePromoCode}
         isSubmittingOrder={isSubmittingOrder}
         handleCheckoutSubmit={handleCheckoutSubmit}
       />
@@ -897,9 +1218,17 @@ function App() {
         setCheckoutSuccess={setCheckoutSuccess}
       />
 
+      {/* Order Tracking Modal */}
+      <TrackOrderModal
+        isOpen={isTrackOpen}
+        onClose={() => setIsTrackOpen(false)}
+        orders={orders}
+      />
+
       {/* Admin Password Authentication Modal */}
       <AdminPasswordModal
         isOpen={isPasswordModalOpen}
+        isSetup={needsAdminSetup}
         onClose={() => { setIsPasswordModalOpen(false); setPasswordError(""); }}
         onSubmit={handlePasswordSubmit}
         error={passwordError}
@@ -939,6 +1268,11 @@ function App() {
         adminPassword={adminPassword}
         onUpdateAdminPassword={handleUpdateAdminPassword}
         onLogout={handleAdminLogout}
+        coupons={coupons}
+        lowStockProducts={lowStockProducts}
+        onAddCoupon={addCoupon}
+        onDeleteCoupon={deleteCoupon}
+        onToggleCoupon={toggleCoupon}
       />
 
     </div>

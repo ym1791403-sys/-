@@ -8,7 +8,8 @@ function Header({
   wishlistCount,
   totalCartItems,
   setIsWishlistOpen,
-  setIsCartOpen
+  setIsCartOpen,
+  onOpenTrack
 }) {
   const hasTiktok = Boolean(storeSettings.tiktokUrl && storeSettings.tiktokUrl.trim());
 
@@ -55,6 +56,15 @@ function Header({
 
           {/* Header Actions */}
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={onOpenTrack}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-stone-700 hover:bg-stone-100 transition text-xs font-bold"
+              title="تتبع طلبك"
+            >
+              <i className="fa-solid fa-truck-fast text-sm"></i>
+              <span className="hidden sm:inline">تتبع طلبك</span>
+            </button>
+
             {hasTiktok && (
               <a
                 href={storeSettings.tiktokUrl}

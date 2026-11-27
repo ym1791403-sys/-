@@ -3,6 +3,7 @@
 
 function AdminPasswordModal({
   isOpen,
+  isSetup,
   onClose,
   onSubmit,
   error,
@@ -60,9 +61,11 @@ function AdminPasswordModal({
           <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center text-lg mx-auto mb-3 shadow-inner">
             <i className="fa-solid fa-lock"></i>
           </div>
-          <h3 className="text-base font-bold text-stone-900">لوحة الإدارة المحمية</h3>
+          <h3 className="text-base font-bold text-stone-900">{isSetup ? "إنشاء كلمة مرور الأدمن" : "لوحة الإدارة المحمية"}</h3>
           <p className="text-[11px] text-stone-500 mt-1">
-            يرجى إدخال كلمة المرور للوصول إلى لوحة التحكم
+            {isSetup
+              ? "لم يتم تعيين كلمة مرور بعد — اختاري كلمة مرور قوية (6 خانات على الأقل) وسيتم حفظها في Firebase فقط"
+              : "يرجى إدخال كلمة المرور للوصول إلى لوحة التحكم"}
           </p>
         </div>
 
@@ -108,7 +111,7 @@ function AdminPasswordModal({
               className="flex-1 bg-stone-900 hover:bg-stone-800 text-white py-2.5 px-4 rounded-xl font-bold text-xs transition shadow flex items-center justify-center gap-1.5"
             >
               <i className="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-              <span>دخول</span>
+              <span>{isSetup ? "حفظ كلمة المرور" : "دخول"}</span>
             </button>
             <button
               type="button"
