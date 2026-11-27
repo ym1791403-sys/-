@@ -21,6 +21,13 @@ async function hashPhoneNumber(phone) {
 }
 window.hashPhoneNumber = hashPhoneNumber;
 
+// Realtime Database snapshots arrive as objects keyed by child key;
+// normalize them to the same [{ id, ...data }] arrays the app uses.
+function snapshotToList(snapshot) {
+  const val = snapshot.val() || {};
+  return Object.keys(val).map(key => ({ id: key, ...val[key] }));
+}
+
 function App() {
   const storeDefaults = window.DEFAULT_STORE_SETTINGS || {
     storeName: "Chic Shop Galena's",
@@ -107,32 +114,19 @@ function App() {
   const [adminTab, setAdminTab] = useState("products"); // "products" | "orders" | "add" | "settings" | "coupons"
   // Security: admin login runs on Firebase Authentication (email +
   // password account created in the Firebase console). No admin password
-  // lives in the code or in Firestore anymore.
+  // lives in the code or in the database anymore.
   const [adminUser, setAdminUser] = useState(null);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordError, setPasswordError] = useState("");
 
   // Firebase Auth session listener (local persistence: stays signed in
-  // across reloads). On first sign-in it also deletes the legacy
-  // Firestore admin password, which is no longer used.
+  // across reloads).
   useEffect(() => {
     if (!window.auth) return;
     const unsubscribe = window.auth.onAuthStateChanged((user) => {
       setAdminUser(user || null);
       setIsAdminAuthenticated(!!user);
-      if (user && window.db) {
-        try {
-          if (!sessionStorage.getItem("admin_legacy_cleaned")) {
-            sessionStorage.setItem("admin_legacy_cleaned", "true");
-            const FieldValue = (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue : null;
-            if (FieldValue) {
-              window.db.collection("settings").doc("admin").update({ password: FieldValue.delete() }).catch(() => {});
-              window.db.collection("settings").doc("store").update({ adminPassword: FieldValue.delete() }).catch(() => {});
-            }
-          }
-        } catch (e) {}
-      }
     });
     return () => unsubscribe();
   }, []);
@@ -244,12 +238,9 @@ function App() {
       return;
     }
 
-    const unsubscribe = window.db.collection("products").onSnapshot(
-      (snapshot) => {
-        const fetched = [];
-        snapshot.forEach(doc => {
-          fetched.push({ id: doc.id, ...doc.data() });
-        });
+    const productsRef = window.db.ref("products");
+    const handleSnapshot = (snapshot) => {
+        const fetched = snapshotToList(snapshot);
         if (fetched.length > 0) {
           setProducts(fetched);
           localStorage.setItem("store_products", JSON.stringify(fetched));
@@ -277,8 +268,8 @@ function App() {
         }
         setIsLoadingProducts(false);
         setDbStatus("connected");
-      },
-      (error) => {
+    };
+    const handleError = (error) => {
         console.warn("Products sync notice:", error);
         const initial = window.INITIAL_PRODUCTS || [];
         const saved = localStorage.getItem("store_products");
@@ -300,109 +291,88 @@ function App() {
           setProducts(initial);
         }
         setIsLoadingProducts(false);
-        if (error.code === "permission-denied") {
+        if (error.code === "permission-denied" || error.code === "PERMISSION_DENIED") {
           setDbStatus("permission_denied");
           setDbErrorMsg(error.message);
         }
-      }
-    );
+    };
+    productsRef.on("value", handleSnapshot, handleError);
 
-    return () => unsubscribe();
+    return () => productsRef.off("value", handleSnapshot);
   }, []);
 
   // 2. Settings Listener
   useEffect(() => {
     if (!window.db) return;
 
-    const unsubscribe = window.db.collection("settings").doc("store").onSnapshot(
-      (doc) => {
-        if (doc.exists) {
-          const data = doc.data();
-          const cleanName = "Chic Shop Galena's";
-          const tiktok = (data.tiktokUrl && data.tiktokUrl.trim()) ? data.tiktokUrl : storeDefaults.tiktokUrl;
-          setStoreSettings(prev => ({ ...prev, ...data, storeName: cleanName, tiktokUrl: tiktok }));
-          setTempSettings(prev => ({ ...prev, ...data, storeName: cleanName, tiktokUrl: tiktok }));
-        }
-      },
-      () => {}
-    );
+    const settingsRef = window.db.ref("settings/store");
+    const handleSettings = (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const cleanName = "Chic Shop Galena's";
+        const tiktok = (data.tiktokUrl && data.tiktokUrl.trim()) ? data.tiktokUrl : storeDefaults.tiktokUrl;
+        setStoreSettings(prev => ({ ...prev, ...data, storeName: cleanName, tiktokUrl: tiktok }));
+        setTempSettings(prev => ({ ...prev, ...data, storeName: cleanName, tiktokUrl: tiktok }));
+      }
+    };
+    settingsRef.on("value", handleSettings, () => {});
 
-    return () => unsubscribe();
+    return () => settingsRef.off("value", handleSettings);
   }, []);
 
   // 3. Orders Listener (admin only — full orders contain customer data,
-  // so Firestore rules allow reading them only for a signed-in admin)
+  // so Realtime Database rules allow reading them only for a signed-in admin)
   useEffect(() => {
     if (!window.db || !isAdminAuthenticated) {
       setOrders([]);
       return;
     }
 
-    const unsubscribe = window.db.collection("orders")
-      .orderBy("createdAt", "desc")
-      .limit(60)
-      .onSnapshot(
-        (snapshot) => {
-          const list = [];
-          snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-          setOrders(list);
-        },
-        () => {}
-      );
+    const ordersRef = window.db.ref("orders").orderByChild("createdAt").limitToLast(60);
+    const handleOrders = (snapshot) => {
+      setOrders(snapshotToList(snapshot).reverse());
+    };
+    ordersRef.on("value", handleOrders, () => {});
 
-    return () => unsubscribe();
+    return () => ordersRef.off("value", handleOrders);
   }, [isAdminAuthenticated]);
 
-  // 3b. Public Order-Tracking Listener (order_tracking docs carry no
+  // 3b. Public Order-Tracking Listener (order_tracking nodes carry no
   // customer data — only status, totals and items — so anyone may read them)
   const [trackingOrders, setTrackingOrders] = useState([]);
   useEffect(() => {
     if (!window.db) return;
-    const unsubscribe = window.db.collection("order_tracking")
-      .orderBy("createdAt", "desc")
-      .limit(60)
-      .onSnapshot(
-        (snapshot) => {
-          const list = [];
-          snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-          setTrackingOrders(list);
-        },
-        () => {}
-      );
-    return () => unsubscribe();
+    const trackingRef = window.db.ref("order_tracking").orderByChild("createdAt").limitToLast(60);
+    const handleTracking = (snapshot) => {
+      setTrackingOrders(snapshotToList(snapshot).reverse());
+    };
+    trackingRef.on("value", handleTracking, () => {});
+    return () => trackingRef.off("value", handleTracking);
   }, []);
 
   // 5. Coupons Listener (falls back to DEFAULT_COUPONS when empty)
   const [coupons, setCoupons] = useState(window.DEFAULT_COUPONS || []);
   useEffect(() => {
     if (!window.db) return;
-    const unsubscribe = window.db.collection("coupons").onSnapshot(
-      (snapshot) => {
-        const list = [];
-        snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-        if (list.length > 0) setCoupons(list);
-      },
-      () => {}
-    );
-    return () => unsubscribe();
+    const couponsRef = window.db.ref("coupons");
+    const handleCoupons = (snapshot) => {
+      const list = snapshotToList(snapshot);
+      if (list.length > 0) setCoupons(list);
+    };
+    couponsRef.on("value", handleCoupons, () => {});
+    return () => couponsRef.off("value", handleCoupons);
   }, []);
 
   // 6. Reviews Listener
   const [reviews, setReviews] = useState([]);
   useEffect(() => {
     if (!window.db) return;
-    const unsubscribe = window.db.collection("reviews")
-      .orderBy("createdAt", "desc")
-      .limit(200)
-      .onSnapshot(
-        (snapshot) => {
-          const list = [];
-          snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-          setReviews(list);
-        },
-        () => {}
-      );
-    return () => unsubscribe();
+    const reviewsRef = window.db.ref("reviews").orderByChild("createdAt").limitToLast(200);
+    const handleReviews = (snapshot) => {
+      setReviews(snapshotToList(snapshot).reverse());
+    };
+    reviewsRef.on("value", handleReviews, () => {});
+    return () => reviewsRef.off("value", handleReviews);
   }, []);
 
   // LocalStorage Sync
@@ -522,10 +492,11 @@ function App() {
       let createdId = Date.now().toString();
       if (window.db) {
         try {
-          const docRef = await window.db.collection("products").add(productPayload);
-          createdId = docRef.id;
+          const newRef = window.db.ref("products").push();
+          await newRef.set(productPayload);
+          createdId = newRef.key;
         } catch (e) {
-          console.warn("Firestore add failed, adding locally:", e);
+          console.warn("Database add failed, adding locally:", e);
         }
       }
 
@@ -560,9 +531,9 @@ function App() {
     try {
       if (window.db) {
         try {
-          await window.db.collection("products").doc(id).delete();
+          await window.db.ref("products/" + id).remove();
         } catch (e) {
-          console.warn("Firestore delete notice:", e);
+          console.warn("Database delete notice:", e);
         }
       }
       const updatedList = products.filter(p => p.id !== id);
@@ -608,9 +579,9 @@ function App() {
         if (newOldPrice !== null && newOldPrice !== undefined && newOldPrice !== "") {
           payload.oldPrice = Number(newOldPrice);
         }
-        await window.db.collection("products").doc(id).set(payload, { merge: true });
+        await window.db.ref("products/" + id).update(payload);
       } catch (e) {
-        console.warn("Firestore price update notice:", e);
+        console.warn("Database price update notice:", e);
       }
     }
 
@@ -650,14 +621,15 @@ function App() {
 
     if (window.db) {
       try {
-        await window.db.collection("products").doc(id).set({
+        const payload = {
           ...updatedFields,
           price: numPrice,
-          oldPrice: numOldPrice,
-          categoryName: catObj ? catObj.name : undefined
-        }, { merge: true });
+          oldPrice: numOldPrice
+        };
+        if (catObj) payload.categoryName = catObj.name;
+        await window.db.ref("products/" + id).update(payload);
       } catch (e) {
-        console.warn("Firestore product update:", e);
+        console.warn("Database product update:", e);
       }
     }
 
@@ -685,11 +657,11 @@ function App() {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       if (window.db && orderId) {
-        await window.db.collection("orders").doc(orderId).update({ status: newStatus });
+        await window.db.ref("orders/" + orderId).update({ status: newStatus });
         // Keep the public tracking copy in sync so customers see the new status.
         const order = orders.find(o => o.id === orderId);
         if (order && order.orderNumber) {
-          window.db.collection("order_tracking").doc(order.orderNumber).update({ status: newStatus }).catch(() => {});
+          window.db.ref("order_tracking/" + order.orderNumber).update({ status: newStatus }).catch(() => {});
         }
         showToast(`تم تحديث حالة الطلب إلى "${newStatus}"`);
       }
@@ -703,7 +675,10 @@ function App() {
     const updated = { ...tempSettings, storeName: "Chic Shop Galena's" };
     try {
       if (window.db) {
-        await window.db.collection("settings").doc("store").set(updated, { merge: true });
+        // Realtime Database update() rejects undefined values, so strip them.
+        const clean = {};
+        Object.keys(updated).forEach(k => { if (updated[k] !== undefined) clean[k] = updated[k]; });
+        await window.db.ref("settings/store").update(clean);
         showToast("تم حفظ الإعدادات بنجاح");
       }
       setStoreSettings(updated);
@@ -845,8 +820,9 @@ function App() {
     };
     try {
       if (window.db) {
-        const docRef = await window.db.collection("coupons").add(payload);
-        setCoupons(prev => [...prev, { id: docRef.id, ...payload }]);
+        const newRef = window.db.ref("coupons").push();
+        await newRef.set(payload);
+        setCoupons(prev => [...prev, { id: newRef.key, ...payload }]);
       } else {
         setCoupons(prev => [...prev, { id: Date.now().toString(), ...payload }]);
       }
@@ -861,7 +837,7 @@ function App() {
   const deleteCoupon = async (id) => {
     const isLocalOnly = String(id).startsWith("default-");
     try {
-      if (window.db && !isLocalOnly) await window.db.collection("coupons").doc(id).delete();
+      if (window.db && !isLocalOnly) await window.db.ref("coupons/" + id).remove();
       setCoupons(prev => prev.filter(c => c.id !== id));
       showToast("تم حذف الكوبون");
     } catch (err) {
@@ -872,7 +848,7 @@ function App() {
   const toggleCoupon = async (id, active) => {
     const isLocalOnly = String(id).startsWith("default-");
     try {
-      if (window.db && !isLocalOnly) await window.db.collection("coupons").doc(id).update({ active });
+      if (window.db && !isLocalOnly) await window.db.ref("coupons/" + id).update({ active });
       setCoupons(prev => prev.map(c => c.id === id ? { ...c, active } : c));
     } catch (err) {
       showToast("تعذر تحديث الكوبون", "error");
@@ -894,8 +870,9 @@ function App() {
     const payload = { productId, name, comment, rating, createdAt: new Date().toISOString() };
     try {
       if (window.db) {
-        const docRef = await window.db.collection("reviews").add(payload);
-        setReviews(prev => [{ id: docRef.id, ...payload }, ...prev]);
+        const newRef = window.db.ref("reviews").push();
+        await newRef.set(payload);
+        setReviews(prev => [{ id: newRef.key, ...payload }, ...prev]);
       } else {
         setReviews(prev => [{ id: Date.now().toString(), ...payload }, ...prev]);
       }
@@ -962,7 +939,7 @@ function App() {
   }, [products]);
 
   // Best sellers: top products by sold quantity across all orders
-  // (computed from the public order_tracking docs, not the admin orders)
+  // (computed from the public order_tracking nodes, not the admin orders)
   const bestSellers = useMemo(() => {
     const sold = {};
     trackingOrders.forEach(o => {
@@ -1039,12 +1016,12 @@ function App() {
 
     try {
       if (window.db) {
-        await window.db.collection("orders").add(orderData);
+        await window.db.ref("orders").push(orderData);
         // Public tracking copy: status + totals + items only, NO customer
         // data. The phone is stored only as a SHA-256 hash so customers
         // can still look up their order by phone.
         const phoneHash = await hashPhoneNumber(phoneDigits);
-        window.db.collection("order_tracking").doc(orderNumber).set({
+        window.db.ref("order_tracking/" + orderNumber).set({
           orderNumber,
           phoneHash,
           status: "جديد",
@@ -1057,14 +1034,12 @@ function App() {
           createdAt: new Date().toISOString()
         }).catch(() => {});
         // Decrease stock for ordered items (only products with a numeric stock)
-        const FieldValue = (typeof firebase !== "undefined" && firebase.firestore) ? firebase.firestore.FieldValue : null;
-        if (FieldValue) {
+        const ServerValue = (typeof firebase !== "undefined" && firebase.database) ? firebase.database.ServerValue : null;
+        if (ServerValue) {
           cart.forEach(item => {
             const prod = products.find(p => p.id === item.id);
             if (prod && typeof prod.stock === "number") {
-              window.db.collection("products").doc(item.id).update({
-                stock: FieldValue.increment(-item.quantity)
-              }).catch(() => {});
+              window.db.ref("products/" + item.id + "/stock").set(ServerValue.increment(-item.quantity)).catch(() => {});
             }
           });
           setProducts(prev => prev.map(p => {

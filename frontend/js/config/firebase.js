@@ -4,6 +4,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyDlVC_LiwIgiDs5a7VYDSs-tJ5mo9-yfhQ",
   authDomain: "galgol.firebaseapp.com",
+  databaseURL: "https://galgol-default-rtdb.firebaseio.com",
   projectId: "galgol",
   storageBucket: "galgol.firebasestorage.app",
   messagingSenderId: "844399737643",
@@ -21,7 +22,8 @@ try {
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
-    db = firebase.firestore();
+    // Realtime Database is the store's database (Firestore is not used).
+    db = firebase.database();
     try {
       auth = firebase.auth();
     } catch (e) {}
