@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -40,20 +40,20 @@
   </script>
 
   <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
   
   <!-- Canvas Confetti for celebrate checkout -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.min.js" integrity="sha512-xr4i9aMyV2sq3d/oaMKaHL4NkoOQP4IMp4zdP7bvgtgB2Ht9tYmh2YXVVYF5CBbq5ug2R0oGMm9BmIAZjb80nQ==" crossorigin="anonymous"></script>
 
   <!-- Firebase SDKs (Compat version) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.js" integrity="sha512-QHsJbVbWExEI55CrW6OaTMWn1FfkS9t90AJNeUl9HAelN79zfp4EmIHM79qLwGRqdMNp2tEKcmgAqjgQn0nPWA==" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-firestore-compat.js" integrity="sha512-NX82DIsdSNayQcAg4xe1nCVFlbzcw7KUqmGtvWLFP2USOrHlwdf08jNNtinQafoTzPVDHeGrepT2wxYJ5U9sRA==" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-analytics-compat.js" integrity="sha512-nNi/xndiZTMLHP5jgewz4PSpcLtbrEiDFPSHwzMEFw+4mkjOlfAyKYuZrQbhM1jw7tK7teDFIvZK98Ft1XnA5g==" crossorigin="anonymous"></script>
 
   <!-- React 18, ReactDOM & Babel -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha512-QVs8Lo43F9lSuBykadDb0oSXDL/BbZ588urWVCRwSIoewQv/Ewg1f84mK3U790bZ0FfhFa1YSQUmIhG+pIRKeg=="></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha512-6a1107rTlA4gYpgHAqbwLAtxmWipBdJFcq8y5S/aTge3Bp+VAklABm2LO+Kg51vOWR9JMZq1Ovjl5tpluNpTeQ=="></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js" integrity="sha512-bAHF//mCdqGSgyUBqhtDgaGLxsraipURsQRGG+3uNncZdsFA6/283u21SOwB6rzINUXSATUMoZaXm4IaV2Lw2Q==" crossorigin="anonymous"></script>
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/styles.css">
@@ -62,29 +62,29 @@
   <div id="root"></div>
 
   <!-- Application Configuration & Constants -->
-  <script type="text/babel" src="js/config/firebase.js"></script>
-  <script type="text/babel" src="js/constants/storeData.js"></script>
+  <script type="text/babel" data-presets="react" src="js/config/firebase.js"></script>
+  <script type="text/babel" data-presets="react" src="js/constants/storeData.js"></script>
 
   <!-- UI Components -->
-  <script type="text/babel" src="js/components/Toast.js"></script>
-  <script type="text/babel" src="js/components/Header.js"></script>
-  <script type="text/babel" src="js/components/Hero.js"></script>
-  <script type="text/babel" src="js/components/CategoryFilter.js"></script>
-  <script type="text/babel" src="js/components/ProductCard.js"></script>
-  <script type="text/babel" src="js/components/ProductGrid.js"></script>
-  <script type="text/babel" src="js/components/CartDrawer.js"></script>
-  <script type="text/babel" src="js/components/WishlistDrawer.js"></script>
-  <script type="text/babel" src="js/components/QuickViewModal.js"></script>
-  <script type="text/babel" src="js/components/CheckoutModal.js"></script>
-  <script type="text/babel" src="js/components/TrackOrderModal.js"></script>
-  <script type="text/babel" src="js/components/OrderSuccessModal.js"></script>
-  <script type="text/babel" src="js/components/AdminPasswordModal.js"></script>
-  <script type="text/babel" src="js/components/AdminModal.js"></script>
-  <script type="text/babel" src="js/components/PolicyModal.js"></script>
-  <script type="text/babel" src="js/components/FloatingActions.js"></script>
-  <script type="text/babel" src="js/components/Footer.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/Toast.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/Header.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/Hero.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/CategoryFilter.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/ProductCard.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/ProductGrid.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/CartDrawer.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/WishlistDrawer.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/QuickViewModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/CheckoutModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/TrackOrderModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/OrderSuccessModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/AdminPasswordModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/AdminModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/PolicyModal.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/FloatingActions.js"></script>
+  <script type="text/babel" data-presets="react" src="js/components/Footer.js"></script>
 
   <!-- Main App Entry -->
-  <script type="text/babel" src="js/app.js"></script>
+  <script type="text/babel" data-presets="react" src="js/app.js"></script>
 </body>
 </html>

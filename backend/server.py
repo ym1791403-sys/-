@@ -7,7 +7,9 @@ import sys
 import os
 import re
 import json
+import time
 from datetime import datetime
+from threading import Lock
 from flask import Flask, send_from_directory, request, jsonify
 
 # Ensure UTF-8 output on Windows consoles
@@ -26,6 +28,77 @@ ORDERS_FILE = os.path.join(DATA_DIR, 'orders.json')
 
 app = Flask(__name__, static_folder=FRONTEND_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1 MB max request body
+
+# ---------------------------------------------------------------------------
+# Security headers + abuse protection (local fallback server only)
+# ---------------------------------------------------------------------------
+CSP_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+    "https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
+    "https://www.googletagmanager.com; "
+    "style-src 'self' 'unsafe-inline' "
+    "https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self' https://firestore.googleapis.com "
+    "https://firebase.googleapis.com https://www.googleapis.com "
+    "https://firebaseinstallations.googleapis.com "
+    "https://www.google-analytics.com https://www.googletagmanager.com; "
+    "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; "
+    "form-action 'self'"
+)
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['Content-Security-Policy'] = CSP_POLICY
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    return response
+
+# Simple in-memory per-IP rate limit for the order endpoint:
+# 10 orders per 60 seconds per IP. Blocks order spam / flooding.
+_RATE_LIMIT_MAX = 10
+_RATE_LIMIT_WINDOW = 60
+_rate_limit_hits = {}
+_rate_limit_lock = Lock()
+
+def _rate_limited(ip):
+    now = time.time()
+    with _rate_limit_lock:
+        hits = [t for t in _rate_limit_hits.get(ip, []) if now - t < _RATE_LIMIT_WINDOW]
+        if len(hits) >= _RATE_LIMIT_MAX:
+            _rate_limit_hits[ip] = hits
+            return True
+        hits.append(now)
+        _rate_limit_hits[ip] = hits
+        return False
+
+def _clean_items(items):
+    # Keep only the fields the store needs, with length/type caps, so a
+    # crafted request cannot stuff arbitrary data into orders.json.
+    clean = []
+    for it in items[:50]:
+        if not isinstance(it, dict):
+            continue
+        try:
+            qty = int(it.get('quantity') or 0)
+        except (TypeError, ValueError):
+            qty = 0
+        price = it.get('price')
+        if isinstance(price, bool) or not isinstance(price, (int, float)):
+            price = 0
+        clean.append({
+            'id': str(it.get('id') or '')[:60],
+            'name': str(it.get('name') or '')[:100],
+            'price': max(0, price),
+            'quantity': max(0, min(50, qty)),
+            'image': str(it.get('image') or '')[:300],
+            'color': str(it.get('color') or '')[:30],
+        })
+    return clean
 
 def load_orders():
     if os.path.exists(ORDERS_FILE):
@@ -66,6 +139,8 @@ def handle_orders():
     # Local fallback order storage. Listing orders is NOT exposed here:
     # the admin panel reads orders from Firestore, and an open GET
     # endpoint used to leak every customer's name, phone and address.
+    if _rate_limited(request.remote_addr or 'unknown'):
+        return jsonify({"status": "error", "message": "Too many orders, please try again in a minute"}), 429
     order_data = request.get_json(silent=True)
     if not isinstance(order_data, dict):
         return jsonify({"status": "error", "message": "Invalid order data"}), 400
@@ -93,7 +168,7 @@ def handle_orders():
             'address': customer['address'].strip()[:300],
             'notes': str(customer.get('notes') or '')[:300],
         },
-        'items': items[:50],
+        'items': _clean_items(items),
         'subtotal': order_data.get('subtotal'),
         'shippingCost': order_data.get('shippingCost'),
         'grandTotal': order_data.get('grandTotal'),
