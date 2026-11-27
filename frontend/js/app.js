@@ -725,8 +725,14 @@ function App() {
       setPasswordError("");
       showToast("مرحباً بك في لوحة الإدارة");
     } catch (err) {
-      if (err && err.code === "auth/too-many-requests") {
+      const code = (err && err.code) || "";
+      if (code === "auth/too-many-requests") {
         setPasswordError("محاولات كثيرة — انتظر دقيقة وحاول تاني");
+      } else if (code === "auth/network-request-failed" || !code) {
+        // No Firebase error code means the request never reached Firebase
+        // (blocked by the browser, offline, or Firebase unreachable) —
+        // this is NOT a wrong-password failure.
+        setPasswordError("تعذّر الاتصال بـ Firebase — حدّث الصفحة وحاول تاني، وتأكد من الإنترنت (دي مش مشكلة باسورد)");
       } else {
         setPasswordError("كلمة المرور غير صحيحة، أو حساب الأدمن لسه متعملش — تأكد من Firebase Console");
       }
