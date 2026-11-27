@@ -706,7 +706,9 @@ function App() {
   // Admin login through Firebase Authentication. The form asks for the
   // password only; the email is a fixed admin address (not a secret).
   const handleAdminLogin = async (password) => {
-    const pwd = (password || "").trim();
+    // Do NOT trim the password: Firebase stores it exactly as typed,
+    // so a leading/trailing space must reach sign-in unchanged.
+    const pwd = password || "";
     if (!pwd) {
       setPasswordError("اكتب كلمة المرور");
       return;
