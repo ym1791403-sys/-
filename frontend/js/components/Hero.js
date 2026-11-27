@@ -96,7 +96,7 @@ function Hero({ storeSettings }) {
               {/* Main Large Visual Card */}
               <div className="rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-white/10 relative group">
                 <img
-                  src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1200&auto=format&fit=crop"
+                  src="images/products/product-1.jpg"
                   alt="Chic Shop Galena's Luxury Jewelry"
                   className="w-full h-[360px] sm:h-[440px] md:h-[480px] lg:h-[520px] object-cover group-hover:scale-105 transition-transform duration-700"
                 />

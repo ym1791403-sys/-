@@ -418,7 +418,7 @@ function App() {
           id: product.id,
           name: product.name,
           price: product.price,
-          image: (product.images && product.images[0]) || "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop",
+          image: (product.images && product.images[0]) || "images/products/product-1.jpg",
           color: chosenColor,
           quantity: 1,
           category: product.categoryName || ""
@@ -486,7 +486,7 @@ function App() {
         : Math.max(0, parseInt(newProduct.stock, 10) || 0),
       colors: parsedColors.length > 0 ? parsedColors : ["ذهبي"],
       images: [
-        newProduct.imageData || "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop"
+        newProduct.imageData || "images/products/product-1.jpg"
       ],
       description: newProduct.description.trim() || "قطعة إكسسوار أنيقة بتصميم عصري راقي.",
       material: newProduct.material.trim() || "مقاوم لتغير اللون ومضاد للحساسية.",

@@ -10,7 +10,7 @@ function ProductCard({
   onAddToCart
 }) {
   const displayImg = (product.images && product.images[0]) || 
-    "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop";
+    "images/products/product-1.jpg";
 
   return (
     <div className="group bg-white rounded-xl overflow-hidden border border-stone-200 hover:shadow-md transition-all flex flex-col justify-between">
